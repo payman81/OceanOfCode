@@ -34,7 +34,7 @@ namespace OceanOfCode
         }
     }
 
-    class GameProps
+    public class GameProps
     {
         public int Width { get; set; }
         public int Height { get; set; }
@@ -70,11 +70,11 @@ namespace OceanOfCode
     class Submarine
     {
         readonly List<string> _actions = new List<string>();
-        private NavigatorBase _navigator;
+        private INavigator _navigator;
         private readonly EnemyTracker _enemyTracker;
         private readonly IConsole _console;
 
-        public Submarine(NavigatorBase navigator, EnemyTracker enemyTracker, IConsole console)
+        public Submarine(INavigator navigator, EnemyTracker enemyTracker, IConsole console)
         {
             _navigator = navigator;
             _enemyTracker = enemyTracker;
@@ -155,122 +155,14 @@ namespace OceanOfCode
         public const char East = 'E';
     }
 
-    abstract class NavigatorBase
+    public interface INavigator
     {
-        protected int[,] Map;
-        private readonly int[,] _originalMap;
-        private readonly GameProps _gameProps;
-
-        protected NavigatorBase(int[,] map, GameProps gameProps)
-        {
-            _originalMap = map;
-            _gameProps = gameProps;
-            Map = map.CloneMap();
-        }
-
-        protected bool CanMoveEast((int, int) currentPosition)
-        {
-            var (x, y) = currentPosition;
-            if (x == _gameProps.Width - 1)
-            {
-                return false;
-            }
-
-            return Map[x + 1, y] == 0;
-        }
-
-        protected bool CanMoveSouth((int, int) currentPosition)
-        {
-            var (x, y) = currentPosition;
-            if (y == _gameProps.Height - 1)
-            {
-                return false;
-            }
-
-            return Map[x, y + 1] == 0;
-        }
-
-        protected bool CanMoveWest((int, int) currentPosition)
-        {
-            var (x, y) = currentPosition;
-            if (x == 0)
-            {
-                return false;
-            }
-
-            return Map[x - 1, y] == 0;
-        }
-
-        protected bool CanMoveNorth((int, int) currentPosition)
-        {
-            var (x, y) = currentPosition;
-            if (y == 0)
-            {
-                return false;
-            }
-
-            return Map[x, y - 1] == 0;
-        }
-
-        public abstract char? Next((int, int) currentPosition);
-
-        public void Reset()
-        {
-            Map = _originalMap.CloneMap();
-        }
-
-        public (int, int) First()
-        {
-            for (int i = 0; i < Map.GetLength(0); i++)
-            {
-                for (int j = Map.GetLength(1) - 1; j >= 0; j--)
-                {
-                    if (Map[i, j] == 0)
-                    {
-                        return (i, j);
-                    }
-                }
-            }
-
-            throw new Exception("No first position is available!");
-        }
+        char? Next((int, int) currentPosition);
+        void Reset();
+        (int, int) First();
     }
 
-    class ClockwiseNavigatorStrategy : NavigatorBase
-    {
-        public ClockwiseNavigatorStrategy(int[,] map, GameProps gameProps) : base(map, gameProps)
-        {
-        }
-
-
-        public override char? Next((int, int) currentPosition)
-        {
-            var (x, y) = currentPosition;
-            Map[x, y] = 1;
-
-            if (CanMoveEast(currentPosition))
-            {
-                return Direction.East;
-            }
-
-            if (CanMoveSouth(currentPosition))
-            {
-                return Direction.South;
-            }
-
-            if (CanMoveWest(currentPosition))
-            {
-                return Direction.West;
-            }
-
-            if (CanMoveNorth(currentPosition))
-            {
-                return Direction.North;
-            }
-
-            return null;
-        }
-    }
+    
 
     public interface IConsole
     {
@@ -282,7 +174,7 @@ namespace OceanOfCode
     public class GameController
     {
         private readonly IConsole _console;
-        private ClockwiseNavigatorStrategy _moveStrategy;
+        private INavigator _moveStrategy;
         private EnemyTracker _enemyTracker;
         private Submarine _submarine;
         private GameProps _gameProps;
@@ -309,7 +201,7 @@ namespace OceanOfCode
          
             _map = ScanMap();
             _console.Debug("Map scanned!");
-            _moveStrategy = new ClockwiseNavigatorStrategy(_map, _gameProps);
+            _moveStrategy = new NeighbourAnalysisNavigatorStrategy(_map, _gameProps);
             _enemyTracker = new EnemyTracker(_map);
             _submarine = new Submarine(_moveStrategy, _enemyTracker, _console);
             _submarine.Start();

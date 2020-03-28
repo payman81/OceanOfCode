@@ -55,7 +55,7 @@ namespace OceanOfCode.Tests
             _console.Record("4 2 0");
             
             _console.Record("....");
-            _console.Record("....");
+            _console.Record("....");    
             
             _navigateHelper.ConsoleRecordMove(0, 1);
             _console.Record("exit");
