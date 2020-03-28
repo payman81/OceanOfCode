@@ -153,6 +153,7 @@ namespace OceanOfCode
         public const char South = 'S';
         public const char West = 'W';
         public const char East = 'E';
+        public const char None = default;
     }
 
     public interface INavigator
