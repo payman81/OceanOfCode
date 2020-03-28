@@ -11,7 +11,7 @@ namespace OceanOfCode
     public class NeighbourAnalysisNavigatorStrategy : NavigatorBase
     {
         private readonly Node[,] _weightedMap;
-        public NeighbourAnalysisNavigatorStrategy(int[,] map, GameProps gameProps) : base(map, gameProps)
+        public NeighbourAnalysisNavigatorStrategy(GameProps gameProps, MapScanner mapScanner) : base(gameProps, mapScanner)
         {
             _weightedMap = new Node[gameProps.Width, gameProps.Height];
             BuildWeightedMap();

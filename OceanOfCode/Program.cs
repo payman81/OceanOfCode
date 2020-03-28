@@ -49,9 +49,9 @@ namespace OceanOfCode
     {
         protected readonly int[,] Map;
 
-        public EnemyTracker(int[,] map)
+        public EnemyTracker(MapScanner mapScanner)
         {
-            Map = map.CloneMap();
+            Map = mapScanner.GetMapOrScan().CloneMap();
         }
 
         public (int, int) GuessEnemyLocation(MoveProps props)
@@ -179,15 +179,11 @@ namespace OceanOfCode
         private Submarine _submarine;
         private GameProps _gameProps;
         private int[,] _map;
+        private MapScanner _mapScanner;
 
         public GameController(IConsole console)
         {
             _console = console;
-            Init();
-        }
-
-        private void Init()
-        {
             _map = null;
             string[] inputs;
             inputs = _console.ReadLine().Split(' ');
@@ -198,30 +194,16 @@ namespace OceanOfCode
                 MyId = int.Parse(inputs[2])
             };
             _console.Debug(_gameProps);
-         
-            _map = ScanMap();
+            _mapScanner = new MapScanner(_gameProps, _console);
+            _map = _mapScanner.GetMapOrScan();
             _console.Debug("Map scanned!");
-            _moveStrategy = new NeighbourAnalysisNavigatorStrategy(_map, _gameProps);
-            _enemyTracker = new EnemyTracker(_map);
+            _moveStrategy = new NeighbourAnalysisNavigatorStrategy(_gameProps, _mapScanner);
+            _enemyTracker = new EnemyTracker(_mapScanner);
             _submarine = new Submarine(_moveStrategy, _enemyTracker, _console);
             _submarine.Start();
         }
 
-        private int[,] ScanMap()
-        {
-            int[,] map = new int[_gameProps.Width, _gameProps.Height];
-            for (int j = 0; j < _gameProps.Height; j++)
-            {
-                string line = _console.ReadLine();
-                char[] rowChars = line.ToCharArray();
-                for (int i = 0; i < _gameProps.Width; i++)
-                {
-                    map[i, j] = rowChars[i].Equals('.') ? 0 : 1;
-                }
-            }
-
-            return map;
-        }
+        
 
         public void StartLoop()
         {
@@ -291,6 +273,38 @@ namespace OceanOfCode
             {
                 System.Console.Error.WriteLine(obj);
             }
+        }
+    }
+
+    public class MapScanner
+    {
+        private readonly GameProps _gameProps;
+        private readonly IConsole _console;
+        private int[,] _map;
+
+        public MapScanner(GameProps gameProps, IConsole console)
+        {
+            _gameProps = gameProps;
+            _console = console;
+        }
+        public int[,] GetMapOrScan()
+        {
+            if (_map != null)
+            {
+                return _map;
+            }
+            _map = new int[_gameProps.Width, _gameProps.Height];
+            for (int j = 0; j < _gameProps.Height; j++)
+            {
+                string line = _console.ReadLine();
+                char[] rowChars = line.ToCharArray();
+                for (int i = 0; i < _gameProps.Width; i++)
+                {
+                    _map[i, j] = rowChars[i].Equals('.') ? 0 : 1;
+                }
+            }
+
+            return _map;
         }
     }
 }

@@ -8,11 +8,11 @@ namespace OceanOfCode
         private readonly int[,] _originalMap;
         protected readonly GameProps GameProps;
 
-        protected NavigatorBase(int[,] map, GameProps gameProps)
+        protected NavigatorBase(GameProps gameProps, MapScanner mapScanner)
         {
-            _originalMap = map;
+            _originalMap = mapScanner.GetMapOrScan();
             GameProps = gameProps;
-            Map = map.CloneMap();
+            Map = _originalMap.CloneMap();
         }
 
         protected virtual bool CanMoveEast((int, int) currentPosition)

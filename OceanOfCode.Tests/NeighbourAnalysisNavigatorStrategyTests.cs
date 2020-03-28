@@ -14,6 +14,7 @@ namespace OceanOfCode.Tests
         {
             _console = new ConsoleMock();
             _navigateHelper = new NavigateHelper(_console);
+            
         }
         
         [Test]
@@ -25,9 +26,8 @@ namespace OceanOfCode.Tests
             _console.Record("..x.");
             _console.Record("....");
             _console.Record("....");
-            var map = _navigateHelper.ScanMap(gameProps.Width, gameProps.Height);
-
-            NeighbourAnalysisNavigatorStrategy sut = new NeighbourAnalysisNavigatorStrategy(map, gameProps);
+            var mapScanner = new MapScanner(gameProps, _console);
+            NeighbourAnalysisNavigatorStrategy sut = new NeighbourAnalysisNavigatorStrategy(gameProps, mapScanner);
             
             Assert.AreEqual(2,sut.WeightedMap[0, 0].Weight);
             Assert.AreEqual(3,sut.WeightedMap[1, 0].Weight);
@@ -46,9 +46,9 @@ namespace OceanOfCode.Tests
             _console.Record("..x.");
             _console.Record("....");
             _console.Record("....");
-            var map = _navigateHelper.ScanMap(gameProps.Width, gameProps.Height);
-
-            NeighbourAnalysisNavigatorStrategy sut = new NeighbourAnalysisNavigatorStrategy(map, gameProps);
+            var mapScanner = new MapScanner(gameProps, _console);
+            
+            NeighbourAnalysisNavigatorStrategy sut = new NeighbourAnalysisNavigatorStrategy(gameProps, mapScanner);
 
             sut.Next((1, 0));
             Assert.AreEqual(1,sut.WeightedMap[0, 0].Weight);
@@ -123,9 +123,9 @@ namespace OceanOfCode.Tests
             _console.Record("..x.");
             _console.Record("....");
             _console.Record("....");
-            var map = _navigateHelper.ScanMap(gameProps.Width, gameProps.Height);
+            var mapScanner = new MapScanner(gameProps, _console);
 
-            NeighbourAnalysisNavigatorStrategy sut = new NeighbourAnalysisNavigatorStrategy(map, gameProps);
+            NeighbourAnalysisNavigatorStrategy sut = new NeighbourAnalysisNavigatorStrategy(gameProps, mapScanner);
 
             sut.Next((1, 0));
             sut.Reset();

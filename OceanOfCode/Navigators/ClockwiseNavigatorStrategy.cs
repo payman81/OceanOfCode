@@ -2,7 +2,7 @@ namespace OceanOfCode
 {
     public class ClockwiseNavigatorStrategy : NavigatorBase
     {
-        public ClockwiseNavigatorStrategy(int[,] map, GameProps gameProps) : base(map, gameProps)
+        public ClockwiseNavigatorStrategy(GameProps gameProps, MapScanner mapScanner) : base(gameProps, mapScanner)
         {
         }
 
