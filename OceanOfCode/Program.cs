@@ -162,8 +162,6 @@ namespace OceanOfCode
         (int, int) First();
     }
 
-    
-
     public interface IConsole
     {
         string ReadLine();
@@ -195,16 +193,12 @@ namespace OceanOfCode
             };
             _console.Debug(_gameProps);
             _mapScanner = new MapScanner(_gameProps, _console);
-            _map = _mapScanner.GetMapOrScan();
-            _console.Debug("Map scanned!");
             _moveStrategy = new NeighbourAnalysisNavigatorStrategy(_gameProps, _mapScanner);
             _enemyTracker = new EnemyTracker(_mapScanner);
             _submarine = new Submarine(_moveStrategy, _enemyTracker, _console);
             _submarine.Start();
         }
-
         
-
         public void StartLoop()
         {
             while (true)
@@ -303,7 +297,7 @@ namespace OceanOfCode
                     _map[i, j] = rowChars[i].Equals('.') ? 0 : 1;
                 }
             }
-
+            _console.Debug("Map scanned!");
             return _map;
         }
     }
