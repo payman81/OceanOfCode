@@ -3,6 +3,7 @@ using NUnit.Framework;
 
 namespace OceanOfCode.Tests
 {
+    [TestFixture, Ignore("Different navigation strategies work in different ways")]
     public class ClockwiseNavigatorAvoidObstaclesTests
     {
         private ConsoleMock _console;
@@ -52,18 +53,19 @@ namespace OceanOfCode.Tests
         [Test]
         public void MustRemainWithinMapBoundary_BottomLeftCorner()
         {
-            _console.Record("4 2 0");
+            _console.Record("4 3 0");
             
+            _console.Record("....");
             _console.Record("....");
             _console.Record("....");    
             
-            _navigateHelper.ConsoleRecordMove(0, 1);
+            _navigateHelper.ConsoleRecordMove(0, 2);
             _console.Record("exit");
             
             GameController controller = new GameController(_console);
             controller.StartLoop();
             
-            Assert.True(_console.RecordedActions.Last().Contains("MOVE E"));
+            Assert.True(_console.RecordedActions.Last().Contains("MOVE N"));
         }
         
         [Test]

@@ -25,7 +25,7 @@ namespace OceanOfCode.Tests
             _console.Record("....");
             _console.Record("....");
             var mapScanner = new MapScanner(gameProps, _console);
-            PreComputedSpiralNavigator sut = new PreComputedSpiralNavigator(mapScanner, _console);
+            PreComputedSpiralNavigator sut = new PreComputedSpiralNavigator(mapScanner, _console, false);
 
             var firstPosition = sut.First();
             Assert.AreEqual((0,0), firstPosition);
@@ -52,7 +52,7 @@ namespace OceanOfCode.Tests
             _console.Record("....");
             _console.Record("....");
             var mapScanner = new MapScanner(gameProps, _console);
-            PreComputedSpiralNavigator sut = new PreComputedSpiralNavigator(mapScanner, _console);
+            PreComputedSpiralNavigator sut = new PreComputedSpiralNavigator(mapScanner, _console, false);
 
             var firstPosition = sut.First();
             Assert.AreEqual((0,0), firstPosition);
@@ -75,7 +75,7 @@ namespace OceanOfCode.Tests
             _console.Record(".xx.");
             _console.Record("....");
             var mapScanner = new MapScanner(gameProps, _console);
-            PreComputedSpiralNavigator sut = new PreComputedSpiralNavigator(mapScanner, _console);
+            PreComputedSpiralNavigator sut = new PreComputedSpiralNavigator(mapScanner, _console, false);
 
             var firstPosition = sut.First();
             Assert.AreEqual((0,0), firstPosition);
@@ -96,7 +96,7 @@ namespace OceanOfCode.Tests
             _console.Record(".xx.");
             _console.Record("....");
             var mapScanner = new MapScanner(gameProps, _console);
-            PreComputedSpiralNavigator sut = new PreComputedSpiralNavigator(mapScanner, _console);
+            PreComputedSpiralNavigator sut = new PreComputedSpiralNavigator(mapScanner, _console, false);
 
 
             Assert.IsNull(sut.Next((0,1)));

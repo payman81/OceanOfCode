@@ -5,7 +5,6 @@ namespace OceanOfCode
 {
     public class Cell
     {
-        //public char Direction { get; set; }
         public (int, int) Position { get; set; }
         public Move Next { get; set; }
         public Move Previous { get; set; }
@@ -25,18 +24,18 @@ namespace OceanOfCode
         private (int, int) _firstPosition;
         private bool _isReversed;
 
-        public ComputedPath(int[,] map, IConsole console)
+        public ComputedPath(int[,] map, IConsole console, bool isReversed)
         {
             _console = console;
             _map = map.CloneMap();
             PreComputePath();
+            _isReversed = isReversed;
         }
-
-       
 
         private void PreComputePath()
         {
-            (int, int)? previousPosition = null;
+            // ReSharper disable once ConvertNullableToShortForm
+            Nullable<(int, int)> previousPosition = null;
             _firstPosition = GetFirstPosition();
 
             _map[_firstPosition.Item1, _firstPosition.Item2] = 1;
@@ -96,6 +95,7 @@ namespace OceanOfCode
         {
             var directionMap = new Dictionary<char, char[]>
             {
+                {Direction.None, new []{Direction.East, Direction.South, Direction.West, Direction.North}},
                 {Direction.East, new[] {Direction.North, Direction.East, Direction.South}},
                 {Direction.South, new[] {Direction.East, Direction.South, Direction.West}},
                 {Direction.West, new[] {Direction.South, Direction.West, Direction.North}},
@@ -103,32 +103,30 @@ namespace OceanOfCode
             };
             int deltaX = previousPosition.Item1 - currentPosition.Item1;
             int deltaY = previousPosition.Item2 - currentPosition.Item2;
-            char currentDirection;
 
-            switch (deltaX, deltaY)
+            var delta = (deltaX, deltaY);
+
+            if (delta.Equals((-1, 0)))
             {
-                case (-1, 0):
-                    currentDirection = Direction.East;
-                    break;
-                case (0, -1):
-                    currentDirection = Direction.South;
-                    break;
-                case (1, 0):
-                    currentDirection = Direction.West;
-                    break;
-                case (0, 1):
-                    currentDirection = Direction.North;
-                    break;
-                    
-                default:
-                    throw new Exception("Incorrect positions given. Previous position and current position should be next to each other");
+                return directionMap[Direction.East];
             }
 
-            if (currentDirection == default(char))
+            if (delta.Equals((0, -1)))
             {
-                throw new Exception($"Could not deduce direction. previous position={previousPosition} current position={currentDirection}");
+                return directionMap[Direction.South];
             }
-            return directionMap[currentDirection];
+
+            if (delta.Equals((1, 0)))
+            {
+                return directionMap[Direction.West];
+            }
+
+            if (delta.Equals((0, 1)))
+            {
+                return directionMap[Direction.North];
+            }
+            
+            return directionMap[Direction.None];
         }
 
         private (Cell, char)? TryFindNextCell(char[] directions, (int, int) position)
@@ -226,35 +224,30 @@ namespace OceanOfCode
 
     public class PreComputedSpiralNavigator : INavigator
     {
-        private (int, int)? _previousPosition = null;
-        private ComputedPath path;
-
-
-        public PreComputedSpiralNavigator(MapScanner mapScanner, IConsole console)
+        private readonly ComputedPath _path;
+        
+        public PreComputedSpiralNavigator(MapScanner mapScanner, IConsole console, bool isReversed)
         {
-            path = new ComputedPath(mapScanner.GetMapOrScan(), console);
+            _path = new ComputedPath(mapScanner.GetMapOrScan(), console, isReversed);
         }
 
         public char? Next((int, int) currentPosition)
         {
-            return path.Next(currentPosition)?.Direction;
+            return _path.Next(currentPosition)?.Direction;
         }
-
-
+        
         public void Reset()
         {
-            path.Reset();
+            _path.Reset();
         }
 
         public (int, int) First()
         {
-            return path.Next().Position;
+            return _path.Next().Position;
         }
-        
-        
     }
 
-    public static class PositionExtensions
+    public static class NavigatorExtensions
     {
         public static (int, int) FindPositionWhenIMove(this (int, int) currentPosition, char direction)
         {

@@ -194,7 +194,7 @@ namespace OceanOfCode
             };
             _console.Debug(_gameProps);
             _mapScanner = new MapScanner(_gameProps, _console);
-            _moveStrategy = new NeighbourAnalysisNavigatorStrategy(_gameProps, _mapScanner);
+            _moveStrategy = new PreComputedSpiralNavigator(_mapScanner, _console, isReversed:true);
             _enemyTracker = new EnemyTracker(_mapScanner);
             _submarine = new Submarine(_moveStrategy, _enemyTracker, _console);
             _submarine.Start();
