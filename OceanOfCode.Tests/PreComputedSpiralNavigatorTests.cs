@@ -117,5 +117,22 @@ namespace OceanOfCode.Tests
             sut.Reset();
             Assert.AreEqual('E', sut.Next((0,0)));
         }
+        
+        [Test]
+        public void MustAvoidDeadEnd_MovingSouth()
+        {
+            var gameProps = new GameProps{Width = 4, Height = 4, MyId = 0};
+            
+            _console.Record("....");
+            _console.Record("....");
+            _console.Record("....");
+            _console.Record("..x.");
+            
+            var mapScanner = new MapScanner(gameProps, _console);
+            PreComputedSpiralNavigator sut = new PreComputedSpiralNavigator(mapScanner, _console, false);
+            
+            
+            Assert.AreEqual('W', sut.Next((3,2)));
+        }
     }
 }

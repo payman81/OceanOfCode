@@ -1,8 +1,7 @@
 ﻿/*
- * 1- Avoid dead ends by using move availability matrix
- * 2- Reset map after Surface
- * 3- EnemyTracker to scan map to find candidates matching opponent's move history
- * 4- Torpedo must avoid obstacles 
+ * - Avoid dead ends by using move availability matrix
+ * - EnemyTracker to scan map to find candidates matching opponent's move history
+ * - Torpedo must avoid obstacles 
  * */
 
 using System;
@@ -177,13 +176,11 @@ namespace OceanOfCode
         private EnemyTracker _enemyTracker;
         private Submarine _submarine;
         private GameProps _gameProps;
-        private int[,] _map;
         private MapScanner _mapScanner;
 
         public GameController(IConsole console)
         {
             _console = console;
-            _map = null;
             string[] inputs;
             inputs = _console.ReadLine().Split(' ');
             _gameProps = new GameProps
@@ -194,7 +191,7 @@ namespace OceanOfCode
             };
             _console.Debug(_gameProps);
             _mapScanner = new MapScanner(_gameProps, _console);
-            _moveStrategy = new PreComputedSpiralNavigator(_mapScanner, _console, isReversed:true);
+            _moveStrategy = new PreComputedSpiralNavigator(_mapScanner, _console, reversedModeOn:true);
             _enemyTracker = new EnemyTracker(_mapScanner);
             _submarine = new Submarine(_moveStrategy, _enemyTracker, _console);
             _submarine.Start();

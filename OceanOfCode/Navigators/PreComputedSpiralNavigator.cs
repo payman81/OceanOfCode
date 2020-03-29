@@ -22,36 +22,32 @@ namespace OceanOfCode
         private readonly IConsole _console;
         private readonly Dictionary<(int, int), Cell> _path = new Dictionary<(int, int), Cell>();
         private (int, int) _firstPosition;
-        private bool _isReversed;
+        private bool _reversedModeOn;
 
-        public ComputedPath(int[,] map, IConsole console, bool isReversed)
+        public ComputedPath(int[,] map, IConsole console, bool reversedModeOn)
         {
             _console = console;
             _map = map.CloneMap();
             PreComputePath();
-            _isReversed = isReversed;
+            _reversedModeOn = reversedModeOn;
         }
 
         private void PreComputePath()
         {
-            // ReSharper disable once ConvertNullableToShortForm
-            Nullable<(int, int)> previousPosition = null;
             _firstPosition = GetFirstPosition();
-
-            _map[_firstPosition.Item1, _firstPosition.Item2] = 1;
             var currentCell = new Cell {Position = _firstPosition};
             _path[_firstPosition] = currentCell;
-            Cell nextCell;
+            Cell nextCell = null;
             do
             {
-                var nextCellAndDirection = TryFindNextCell(currentCell.Position, previousPosition);
+                _map[currentCell.Position.Item1, currentCell.Position.Item2] = 1;
+                var nextCellAndDirection = TryFindNextCell(currentCell.Position, nextCell?.Previous.Destination.Position);
                 nextCell = nextCellAndDirection?.Item1;
                 if (nextCell != null)
                 {
                     nextCell.Previous = new Move{Destination = currentCell, Direction = nextCellAndDirection.Value.Item2.ToOpposite()};
                     currentCell.Next = new Move{Destination = nextCell, Direction = nextCellAndDirection.Value.Item2};
                     _path[nextCell.Position] = nextCell;
-                    previousPosition = currentCell.Position;
                     currentCell = nextCell;
                 }
             } while (nextCell != null);
@@ -77,18 +73,15 @@ namespace OceanOfCode
 
         private (Cell, char)? TryFindNextCell((int, int) currentPosition, (int, int)? previousPosition)
         {
-            var (x, y) = currentPosition;
-            _map[x, y] = 1;
-
             if (!previousPosition.HasValue)
             {
-                return TryFindNextCell(new[] {Direction.East, Direction.South, Direction.West, Direction.North},
+                return TryFindNextCellBasedOnOrderedDirections(new[] {Direction.East, Direction.South, Direction.West, Direction.North},
                     currentPosition);
             }
 
             char[] directions = GetDirectionsInTheRightOrder(currentPosition, previousPosition.Value);
 
-            return TryFindNextCell(directions, currentPosition);
+            return TryFindNextCellBasedOnOrderedDirections(directions, currentPosition);
         }
 
         private char[] GetDirectionsInTheRightOrder((int, int) currentPosition, (int, int) previousPosition)
@@ -129,7 +122,7 @@ namespace OceanOfCode
             return directionMap[Direction.None];
         }
 
-        private (Cell, char)? TryFindNextCell(char[] directions, (int, int) position)
+        private (Cell, char)? TryFindNextCellBasedOnOrderedDirections(char[] directions, (int, int) position)
         {
             foreach (var direction in directions)
             {
@@ -213,12 +206,12 @@ namespace OceanOfCode
 
         public Move Next((int, int) currentPosition)
         {
-            return _isReversed? _path[currentPosition].Previous : _path[currentPosition].Next;
+            return _reversedModeOn? _path[currentPosition].Previous : _path[currentPosition].Next;
         }
 
         public void Reset()
         {
-            _isReversed = !_isReversed;
+            _reversedModeOn = !_reversedModeOn;
         }
     }
 
@@ -226,9 +219,9 @@ namespace OceanOfCode
     {
         private readonly ComputedPath _path;
         
-        public PreComputedSpiralNavigator(MapScanner mapScanner, IConsole console, bool isReversed)
+        public PreComputedSpiralNavigator(MapScanner mapScanner, IConsole console, bool reversedModeOn)
         {
-            _path = new ComputedPath(mapScanner.GetMapOrScan(), console, isReversed);
+            _path = new ComputedPath(mapScanner.GetMapOrScan(), console, reversedModeOn);
         }
 
         public char? Next((int, int) currentPosition)
