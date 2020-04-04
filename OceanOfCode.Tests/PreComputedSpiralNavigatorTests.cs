@@ -25,7 +25,7 @@ namespace OceanOfCode.Tests
             _console.Record("....");
             _console.Record("....");
             var mapScanner = new MapScanner(gameProps, _console);
-            PreComputedSpiralNavigator sut = new PreComputedSpiralNavigator(mapScanner, _console, false);
+            PreComputedSpiralNavigator sut = new PreComputedSpiralNavigator(mapScanner, _console, false, gameProps);
 
             var firstPosition = sut.First();
             Assert.AreEqual((0,0), firstPosition);
@@ -41,6 +41,33 @@ namespace OceanOfCode.Tests
             Assert.AreEqual('W', sut.Next((2,2)));
             Assert.IsNull( sut.Next((1,2)));
         }
+        
+        [Test]
+        public void MustReturnCorrectOrderOfPositions_ReversedMode()
+        {
+            var gameProps = new GameProps{Width = 4, Height = 4, MyId = 0};
+
+            _console.Record("....");
+            _console.Record("....");
+            _console.Record("....");
+            _console.Record("....");
+            var mapScanner = new MapScanner(gameProps, _console);
+            PreComputedSpiralNavigator sut = new PreComputedSpiralNavigator(mapScanner, _console, true, gameProps);
+
+            var firstPosition = sut.First();
+            Assert.AreEqual((1,2), firstPosition);
+
+            Assert.AreEqual('E', sut.Next((1,2)));
+            Assert.AreEqual('N', sut.Next((2,2)));
+            Assert.AreEqual('W', sut.Next((2,1)));
+            Assert.AreEqual('W', sut.Next((1,1)));
+            Assert.AreEqual('S', sut.Next((0,1)));
+            Assert.AreEqual('N', sut.Next((3,3)));
+            Assert.AreEqual('W', sut.Next((3,0)));
+            Assert.AreEqual('W', sut.Next((2,0)));
+            Assert.AreEqual('W', sut.Next((1,0)));
+            Assert.IsNull( sut.Next((0,0)));
+        }
 
         [Test]
         public void MustAvoidIslandsWhenMovingEast()
@@ -52,7 +79,7 @@ namespace OceanOfCode.Tests
             _console.Record("....");
             _console.Record("....");
             var mapScanner = new MapScanner(gameProps, _console);
-            PreComputedSpiralNavigator sut = new PreComputedSpiralNavigator(mapScanner, _console, false);
+            PreComputedSpiralNavigator sut = new PreComputedSpiralNavigator(mapScanner, _console, false, gameProps);
 
             var firstPosition = sut.First();
             Assert.AreEqual((0,0), firstPosition);
@@ -75,7 +102,7 @@ namespace OceanOfCode.Tests
             _console.Record(".xx.");
             _console.Record("....");
             var mapScanner = new MapScanner(gameProps, _console);
-            PreComputedSpiralNavigator sut = new PreComputedSpiralNavigator(mapScanner, _console, false);
+            PreComputedSpiralNavigator sut = new PreComputedSpiralNavigator(mapScanner, _console, false, gameProps);
 
             var firstPosition = sut.First();
             Assert.AreEqual((0,0), firstPosition);
@@ -96,7 +123,7 @@ namespace OceanOfCode.Tests
             _console.Record(".xx.");
             _console.Record("....");
             var mapScanner = new MapScanner(gameProps, _console);
-            PreComputedSpiralNavigator sut = new PreComputedSpiralNavigator(mapScanner, _console, false);
+            PreComputedSpiralNavigator sut = new PreComputedSpiralNavigator(mapScanner, _console, false, gameProps);
 
 
             Assert.IsNull(sut.Next((0,1)));
@@ -119,6 +146,23 @@ namespace OceanOfCode.Tests
         }
         
         [Test]
+        public void MustAvoidDeadEnd_MovingEast()
+        {
+            var gameProps = new GameProps{Width = 4, Height = 4, MyId = 0};
+            
+            _console.Record("....");
+            _console.Record("..xx");
+            _console.Record("....");
+            _console.Record("....");
+            
+            var mapScanner = new MapScanner(gameProps, _console);
+            PreComputedSpiralNavigator sut = new PreComputedSpiralNavigator(mapScanner, _console, false, gameProps);
+            
+            
+            Assert.AreEqual('S', sut.Next((1,0)));
+        }
+        
+        [Test]
         public void MustAvoidDeadEnd_MovingSouth()
         {
             var gameProps = new GameProps{Width = 4, Height = 4, MyId = 0};
@@ -129,10 +173,44 @@ namespace OceanOfCode.Tests
             _console.Record("..x.");
             
             var mapScanner = new MapScanner(gameProps, _console);
-            PreComputedSpiralNavigator sut = new PreComputedSpiralNavigator(mapScanner, _console, false);
+            PreComputedSpiralNavigator sut = new PreComputedSpiralNavigator(mapScanner, _console, false, gameProps);
             
             
             Assert.AreEqual('W', sut.Next((3,2)));
+        }
+        
+        [Test]
+        public void MustAvoidDeadEnd_MovingWest()
+        {
+            var gameProps = new GameProps{Width = 4, Height = 4, MyId = 0};
+            
+            _console.Record("....");
+            _console.Record("....");
+            _console.Record("xx..");
+            _console.Record("....");
+            
+            var mapScanner = new MapScanner(gameProps, _console);
+            PreComputedSpiralNavigator sut = new PreComputedSpiralNavigator(mapScanner, _console, false, gameProps);
+            
+            
+            Assert.AreEqual('W', sut.Next((3,3)));
+            Assert.AreEqual('N', sut.Next((2,3)));
+        }
+        [Test]
+        public void MustAvoidDeadEnd_MovingNorth()
+        {
+            var gameProps = new GameProps{Width = 4, Height = 4, MyId = 0};
+            
+            _console.Record("....");
+            _console.Record(".x..");
+            _console.Record("....");
+            _console.Record("....");
+            
+            var mapScanner = new MapScanner(gameProps, _console);
+            PreComputedSpiralNavigator sut = new PreComputedSpiralNavigator(mapScanner, _console, false, gameProps);
+            
+            
+            Assert.AreEqual('E', sut.Next((0,2)));
         }
     }
 }

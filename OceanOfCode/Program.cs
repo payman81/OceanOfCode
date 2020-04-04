@@ -1,8 +1,4 @@
-﻿/*
- * - Avoid dead ends by using move availability matrix
- * - EnemyTracker to scan map to find candidates matching opponent's move history
- * - Torpedo must avoid obstacles 
- * */
+﻿
 
 using System;
 using System.Collections.Generic;
@@ -10,7 +6,7 @@ using System.Linq;
 
 namespace OceanOfCode
 {
-    static class ArrayExtensions
+    public static class ArrayExtensions
     {
         public static int[,] CloneMap(this int[,] source)
         {
@@ -19,6 +15,23 @@ namespace OceanOfCode
             int[,] clone = new int[dimension1Length, dimension2Length];
             Array.Copy(source, clone, dimension1Length * dimension2Length);
             return clone;
+        }
+
+        public static int AvailableCellCount(this int[,] source)
+        {
+            int availableCellCount = 0;
+            for (int j = 0; j < source.GetLength(1); j++)
+            {
+                for (int i = 0; i < source.GetLength(0); i++)
+                {
+                    if (source[i, j] == 0)
+                    {
+                        availableCellCount++;
+                    }
+                }
+            }
+
+            return availableCellCount;
         }
     }
 
@@ -191,7 +204,7 @@ namespace OceanOfCode
             };
             _console.Debug(_gameProps);
             _mapScanner = new MapScanner(_gameProps, _console);
-            _moveStrategy = new PreComputedSpiralNavigator(_mapScanner, _console, reversedModeOn:true);
+            _moveStrategy = new PreComputedSpiralNavigator(_mapScanner, _console, reversedModeOn:true, _gameProps);
             _enemyTracker = new EnemyTracker(_mapScanner);
             _submarine = new Submarine(_moveStrategy, _enemyTracker, _console);
             _submarine.Start();
