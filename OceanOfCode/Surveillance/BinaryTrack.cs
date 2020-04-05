@@ -167,7 +167,11 @@ namespace OceanOfCode.Surveillance
 
         public static BinaryTrack StartEmptyTrack(GameProps gameProps)
         {
-            return new BinaryTrack(gameProps, (0,0));
+            short[] binaryMap = new short[gameProps.Height];
+            //Find starting position
+            binaryMap[0] = Convert.ToInt16("100000000000000", 2);
+            
+            return new BinaryTrack(gameProps, binaryMap, (0,0));
         }
     }
 }

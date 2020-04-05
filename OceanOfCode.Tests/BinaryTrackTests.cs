@@ -6,12 +6,9 @@ namespace OceanOfCode.Tests
 {
     public class BinaryTrackTests
     {
-        private ConsoleMock _console;
-
         [SetUp]
         public void Setup()
         {
-            _console = new ConsoleMock();
         }
 
         [Test]
@@ -19,11 +16,17 @@ namespace OceanOfCode.Tests
         {
             var gameProps = new GameProps {Width = 4, Height = 4, MyId = 0};
 
-            BinaryTrack sut = BinaryTrack.StartEmptyTrack(gameProps);
+            string[] shape = {
+                "....",
+                "....",
+                "....",
+                "...."
+            };
+            
+            BinaryTrack sut = BinaryTrack.FromString(gameProps, shape);
+            
             int[,] map = sut.ToCartesian();
-            Assert.AreEqual(gameProps.Width, map.GetLength(0));
-            Assert.AreEqual(gameProps.Height, map.GetLength(1));
-            Assert.AreEqual(new[,] {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, map);
+            MapAssert.AllCoordinatesAreZero(map);
         }
 
         [Test]
@@ -40,9 +43,8 @@ namespace OceanOfCode.Tests
 
             BinaryTrack sut = BinaryTrack.FromString(gameProps, shape);
             int[,] map = sut.ToCartesian();
-            Assert.AreEqual(gameProps.Width, map.GetLength(0));
-            Assert.AreEqual(gameProps.Height, map.GetLength(1));
-            Assert.AreEqual(new[,] {{1, 1, 1, 1}, {1, 1, 1, 1}, {1, 1, 1, 1}, {1, 1, 1, 1}}, map);
+            
+            MapAssert.AllCoordinatesAreOne(map);
         }
 
         [Test]
@@ -61,7 +63,8 @@ namespace OceanOfCode.Tests
             int[,] map = sut.ToCartesian();
             Assert.AreEqual(gameProps.Width, map.GetLength(0));
             Assert.AreEqual(gameProps.Height, map.GetLength(1));
-            Assert.AreEqual(new[,] {{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 1, 0, 0}, {1, 0, 0, 0}}, map);
+            
+            MapAssert.AllCoordinatesAreZeroExcept(map, (0,0), (3,0), (1,1), (2,1));
         }
 
         [Test]
@@ -76,11 +79,12 @@ namespace OceanOfCode.Tests
                 "..............."
             };
 
-            var mapScanner = new MapScanner(gameProps, _console);
-
             BinaryTrack sut = BinaryTrack.FromString(gameProps, shape);
             sut.TryShiftEast(out var output);
             Console.WriteLine(output);
+
+            var map = output.ToCartesian();
+            MapAssert.AllCoordinatesAreZeroExcept(map, (1,1), (2,0));
         }
 
         [Test]
@@ -119,6 +123,19 @@ namespace OceanOfCode.Tests
             Console.WriteLine(output);
             Assert.IsFalse(canMoveSouth);
             Assert.IsNull(output);
+        }
+
+        [Test]
+        public void Move_Initial()
+        {
+            var gameProps = new GameProps {Width = 15, Height = 4, MyId = 0};
+            
+            BinaryTrack sut = BinaryTrack.StartEmptyTrack(gameProps);
+            
+            Assert.AreEqual((0,0), sut.Head);
+            var map = sut.ToCartesian();
+            Assert.AreEqual(1, map[0,0]);
+            MapAssert.AllCoordinatesAreZeroExcept(map, (0, 0));
         }
     }
 }
