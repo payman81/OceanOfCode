@@ -1,12 +1,13 @@
-﻿
+
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using OceanOfCode.Surveillance;
 
 namespace OceanOfCode
 {
-    public static class ArrayExtensions
+    public static class MapExtensions
     {
         public static int[,] CloneMap(this int[,] source)
         {
@@ -35,14 +36,15 @@ namespace OceanOfCode
         }
     }
 
-    class MoveProps
+    public class MoveProps
     {
         public (int, int) MyPosition { get; set; }
         public int TorpedoCooldown { get; set; }
+        public string OpponentOrders { get; set; }
 
         public override string ToString()
         {
-            return $"MoveProps Input: x:{MyPosition.Item1}, y:{MyPosition.Item2}, TorpedoCooldown:{TorpedoCooldown}";
+            return $"MoveProps Input: x:{MyPosition.Item1}, y:{MyPosition.Item2}, TorpedoCooldown:{TorpedoCooldown}, OpponentOrders:{OpponentOrders}";
         }
     }
 
@@ -57,11 +59,11 @@ namespace OceanOfCode
         }
     }
 
-    class EnemyTracker
+    class EnemyTracker_OldStrategy
     {
         protected readonly int[,] Map;
 
-        public EnemyTracker(MapScanner mapScanner)
+        public EnemyTracker_OldStrategy(MapScanner mapScanner)
         {
             Map = mapScanner.GetMapOrScan().CloneMap();
         }
@@ -102,9 +104,10 @@ namespace OceanOfCode
         }
         public void Next(MoveProps moveProps)
         {
+            _enemyTracker.Next(moveProps);
             if (moveProps.TorpedoCooldown == 0)
             {
-                Torpedo(_enemyTracker.GuessEnemyLocation(moveProps));
+                //Torpedo(_enemyTracker.GuessEnemyLocation(moveProps));
             }
 
             var (x, y) = moveProps.MyPosition;
@@ -159,7 +162,7 @@ namespace OceanOfCode
         }
     }
 
-    class Direction
+    public class Direction
     {
         public const char North = 'N';
         public const char South = 'S';
@@ -205,7 +208,7 @@ namespace OceanOfCode
             _console.Debug(_gameProps);
             _mapScanner = new MapScanner(_gameProps, _console);
             _moveStrategy = new PreComputedSpiralNavigator(_mapScanner, _console, reversedModeOn:true, _gameProps);
-            _enemyTracker = new EnemyTracker(_mapScanner);
+            _enemyTracker = new EnemyTracker(_gameProps, _mapScanner.GetMapOrScan());
             _submarine = new Submarine(_moveStrategy, _enemyTracker, _console);
             _submarine.Start();
         }
@@ -230,7 +233,12 @@ namespace OceanOfCode
                 string sonarResult = _console.ReadLine();
                 string opponentOrders = _console.ReadLine();
 
-                var moveProps = new MoveProps {MyPosition = (x, y), TorpedoCooldown = torpedoCooldown};
+                var moveProps = new MoveProps
+                {
+                    MyPosition = (x, y), 
+                    TorpedoCooldown = torpedoCooldown,
+                    OpponentOrders = opponentOrders
+                };
                 _console.Debug(moveProps);
                 _submarine.Next(moveProps);
             }

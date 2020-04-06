@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace OceanOfCode.Surveillance
 {
@@ -6,7 +7,7 @@ namespace OceanOfCode.Surveillance
     * - (done) check for possibilities 
     * - (done) keep track of the head
     * - (done)transfer series of directions to BinaryMap
-     * - collect enemy's commands
+     * - (done) collect enemy's commands
      * - Torpedo if charged and single possibility is within reach
      *         /*
          * TORPEDO 5 2|MOVE E
@@ -27,6 +28,7 @@ namespace OceanOfCode.Surveillance
         private readonly GameProps _gameProps;
         private readonly int[,] _cartesianMap;
         private readonly BinaryTrack _binaryTrack;
+        Regex _moveRegex = new Regex("MOVE (.?)");
 
         private List<char> _lastMoves = new List<char>();
         private BinaryTrack _currentTrack;
@@ -93,5 +95,23 @@ namespace OceanOfCode.Surveillance
         {
             return _currentTrack;
         }
+
+        public void Next(MoveProps moveProps)
+        {
+            var orders = moveProps.OpponentOrders.Split('|');
+            foreach (var order in orders)
+            {
+                var regexResult = _moveRegex.Match(order);
+                if (regexResult.Groups.Count > 1)
+                {
+                    char moveDirection = regexResult.Groups[1].Value.ToCharArray()[0];
+                    OnMove(moveDirection);
+                }
+            }
+            
+         
+        }
     }
+
+   
 }
