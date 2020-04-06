@@ -16,7 +16,7 @@ namespace OceanOfCode.Surveillance
             _head = head;
         }
 
-        public BinaryTrack(GameProps gameProps, short[] data, (int, int)? head)
+        private BinaryTrack(GameProps gameProps, short[] data, (int, int)? head)
         {
             _gameProps = gameProps;
             _binaryMap = data;
@@ -60,6 +60,7 @@ namespace OceanOfCode.Surveillance
             {
                 head = (bmap._head.Value.Item1 + 1, bmap._head.Value.Item2);
             }
+
             var newBmap = new BinaryTrack(bmap._gameProps, head);
             for (int j = 0; j < bmap._binaryMap.Length; j++)
             {
@@ -67,6 +68,136 @@ namespace OceanOfCode.Surveillance
             }
 
             return newBmap;
+        }
+
+        public static BinaryTrack operator <<(BinaryTrack bmap, int i)
+        {
+            (int, int)? head = null;
+            if (bmap._head.HasValue)
+            {
+                head = (bmap._head.Value.Item1 - 1, bmap._head.Value.Item2);
+            }
+
+            var newBmap = new BinaryTrack(bmap._gameProps, head);
+            for (int j = 0; j < bmap._binaryMap.Length; j++)
+            {
+                newBmap._binaryMap[j] = (short) (bmap._binaryMap[j] << i);
+            }
+
+            return newBmap;
+        }
+        
+        public bool HasCollisionWith(BinaryTrack target)
+        {
+            for (int j = 0; j < _binaryMap.Length; j++)
+            {
+                if (_binaryMap[j] > 0 && (_binaryMap[j] & target._binaryMap[j]) > 0)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public static BinaryTrack StartEmptyTrack(GameProps gameProps)
+        {
+            short[] binaryMap = new short[gameProps.Height];
+            //Find starting position
+            binaryMap[0] = Convert.ToInt16("100000000000000", 2);
+
+            return new BinaryTrack(gameProps, binaryMap, (0, 0));
+        }
+
+        public BinaryTrack MoveEast()
+        {
+            BinaryTrack baseline = this;
+            if (!CanMoveEast())
+            {
+                baseline = this << 1;
+            }
+
+            var (currentHeadX, currentHeadY) = baseline.Head.Value;
+            var newBinaryMap = new short[baseline._binaryMap.Length];
+            Array.Copy(baseline._binaryMap, newBinaryMap, baseline._binaryMap.Length);
+            checked
+            {
+                var newHead = (X: currentHeadX + 1, Y: currentHeadY);
+                newBinaryMap[newHead.Y] =
+                    (short) (baseline._binaryMap[newHead.Y] | (short) Math.Pow(2, _gameProps.Width - 1 - newHead.X));
+                return new BinaryTrack(_gameProps, newBinaryMap, newHead);
+            }
+
+            bool CanMoveEast()
+            {
+                if (!baseline.Head.HasValue)
+                {
+                    return false;
+                }
+
+                return (baseline._binaryMap[baseline.Head.Value.Item2] & 1) == 0;
+            }
+        }
+
+        public BinaryTrack MoveSouth()
+        {
+            BinaryTrack baseline = this;
+            if (!CanMoveSouth())
+            {
+                baseline = ShiftNorth();
+            }
+
+            var (currentHeadX, currentHeadY) = baseline.Head.Value;
+            var newBinaryMap = new short[baseline._binaryMap.Length];
+            Array.Copy(baseline._binaryMap, newBinaryMap, baseline._binaryMap.Length);
+
+            var newHead = (X: currentHeadX, Y: currentHeadY + 1);
+            newBinaryMap[newHead.Y] =
+                (short) (baseline._binaryMap[newHead.Y] | (short) Math.Pow(2, _gameProps.Width - 1 - newHead.X));
+            return new BinaryTrack(_gameProps, newBinaryMap, newHead);
+
+            bool CanMoveSouth()
+            {
+                if (!baseline.Head.HasValue)
+                {
+                    return false;
+                }
+
+                var (_, y) = baseline._head.Value;
+
+                return y < baseline._gameProps.Height - 1;
+            }
+        }
+
+        public BinaryTrack MoveWest()
+        {
+            BinaryTrack baseline = this;
+            if (!CanMoveWest())
+            {
+                baseline = this >> 1;
+            }
+
+            var (currentHeadX, currentHeadY) = baseline.Head.Value;
+            var newBinaryMap = new short[baseline._binaryMap.Length];
+            Array.Copy(baseline._binaryMap, newBinaryMap, baseline._binaryMap.Length);
+            checked
+            {
+                var newHead = (X: currentHeadX - 1, Y: currentHeadY);
+                newBinaryMap[newHead.Y] =
+                    (short) (baseline._binaryMap[newHead.Y] | (short) Math.Pow(2, _gameProps.Width - 1 - newHead.X));
+                return new BinaryTrack(_gameProps, newBinaryMap, newHead);
+            }
+
+            bool CanMoveWest()
+            {
+                int OneWith14Zeros = 16384;
+                if (!baseline.Head.HasValue)
+                {
+                    return false;
+                }
+
+                return (baseline._binaryMap[baseline.Head.Value.Item2] & OneWith14Zeros) == 0;
+            }
         }
 
         public bool TryShiftEast(out BinaryTrack output)
@@ -79,6 +210,10 @@ namespace OceanOfCode.Surveillance
 
             output = null;
             return false;
+            bool CanShiftEast()
+            {
+                return _binaryMap.All(row => (row & (short) 1) == 0);
+            }
         }
 
         public bool TryShiftSouth(out BinaryTrack output)
@@ -90,7 +225,7 @@ namespace OceanOfCode.Surveillance
                 {
                     head = (_head.Value.Item1, _head.Value.Item2 + 1);
                 }
-                
+
                 short[] newBmap = new short[_binaryMap.Length];
                 Array.Copy(_binaryMap, 0, newBmap, 1, _binaryMap.Length - 1);
                 output = new BinaryTrack(_gameProps, newBmap, head);
@@ -99,29 +234,53 @@ namespace OceanOfCode.Surveillance
 
             output = null;
             return false;
-        }
-
-        private bool CanShiftEast()
-        {
-            return _binaryMap.All(row => (row & (short) 1) == 0);
-        }
-
-        private bool CanShiftSouth()
-        {
-            return _binaryMap[^1] == 0;
-        }
-
-        public bool HasCollisionWith(BinaryTrack target)
-        {
-            for (int j = 0; j < _binaryMap.Length; j++)
+            bool CanShiftSouth()
             {
-                if (_binaryMap[j] > 0 && (_binaryMap[j] & target._binaryMap[j]) > 0)
-                {
-                    return true;
-                }
+                return _binaryMap[^1] == 0;
+            }
+        }
+        
+        public BinaryTrack MoveNorth()
+        {
+            BinaryTrack baseline = this;
+            if (!CanMoveNorth())
+            {
+                TryShiftSouth(out baseline);
             }
 
-            return false;
+            var (currentHeadX, currentHeadY) = baseline.Head.Value;
+            var newBinaryMap = new short[baseline._binaryMap.Length];
+            Array.Copy(baseline._binaryMap, newBinaryMap, baseline._binaryMap.Length);
+
+            var newHead = (X: currentHeadX, Y: currentHeadY - 1);
+            newBinaryMap[newHead.Y] =
+                (short) (baseline._binaryMap[newHead.Y] | (short) Math.Pow(2, _gameProps.Width - 1 - newHead.X));
+            return new BinaryTrack(_gameProps, newBinaryMap, newHead);
+
+            bool CanMoveNorth()
+            {
+                if (!baseline.Head.HasValue)
+                {
+                    return false;
+                }
+
+                var (_, y) = baseline._head.Value;
+
+                return y > 0;
+            }
+        }
+        
+        private BinaryTrack ShiftNorth()
+        {
+            (int, int)? head = null;
+            if (_head.HasValue)
+            {
+                head = (_head.Value.Item1, _head.Value.Item2 - 1);
+            }
+
+            short[] newBmap = new short[_binaryMap.Length];
+            Array.Copy(_binaryMap, 1, newBmap, 0, _binaryMap.Length - 1);
+            return new BinaryTrack(_gameProps, newBmap, head);
         }
 
         public static BinaryTrack FromCartesian(GameProps gameProps, int[,] cartesianMap)
@@ -145,7 +304,7 @@ namespace OceanOfCode.Surveillance
         public static BinaryTrack FromString(GameProps gameProps, string[] shape)
         {
             (int, int)? head = null;
-            
+
             short[] binaryMapData = new short[gameProps.Height];
             for (int j = 0; j < gameProps.Height; j++)
             {
@@ -155,6 +314,7 @@ namespace OceanOfCode.Surveillance
                 {
                     head = (positionOfHead, j);
                 }
+
                 row = shape[j]
                     .Replace('x', '1')
                     .Replace('X', '1')
@@ -163,15 +323,6 @@ namespace OceanOfCode.Surveillance
             }
 
             return new BinaryTrack(gameProps, binaryMapData, head);
-        }
-
-        public static BinaryTrack StartEmptyTrack(GameProps gameProps)
-        {
-            short[] binaryMap = new short[gameProps.Height];
-            //Find starting position
-            binaryMap[0] = Convert.ToInt16("100000000000000", 2);
-            
-            return new BinaryTrack(gameProps, binaryMap, (0,0));
         }
     }
 }

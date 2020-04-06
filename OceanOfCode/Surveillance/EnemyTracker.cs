@@ -5,7 +5,7 @@ namespace OceanOfCode.Surveillance
     /* MVP:
     * - (done) check for possibilities 
     * - (done) keep track of the head
-    * - transfer series of directions to BinaryMap
+    * - (done)transfer series of directions to BinaryMap
      * - collect enemy's commands
      * - Torpedo if charged and single possibility is within reach
      *         /*
@@ -27,17 +27,17 @@ namespace OceanOfCode.Surveillance
         private readonly GameProps _gameProps;
         private readonly int[,] _cartesianMap;
         private readonly BinaryTrack _binaryTrack;
-        
+
         private List<char> _lastMoves = new List<char>();
-        private BinaryTrack _startingPosition;
-        
+        private BinaryTrack _currentTrack;
+
 
         public EnemyTracker(GameProps gameProps, int[,] map)
         {
             _gameProps = gameProps;
             _cartesianMap = map.CloneMap();
             _binaryTrack = BinaryTrack.FromCartesian(gameProps, map);
-            _startingPosition = BinaryTrack.StartEmptyTrack(gameProps);
+            _currentTrack = BinaryTrack.StartEmptyTrack(gameProps);
         }
 
         public IEnumerable<BinaryTrack> PossibleMatches(BinaryTrack currentPossibleTrack)
@@ -58,20 +58,40 @@ namespace OceanOfCode.Surveillance
             } while (nextPossibleTrack.TryShiftSouth(out nextPossibleTrack));
         }
 
+        public IEnumerable<BinaryTrack> PossibleMatches()
+        {
+            return PossibleMatches(_currentTrack);
+        }
+
+
         public void OnMove(char direction)
         {
-            _lastMoves.Add(direction);
-            
+            switch (direction)
+            {
+                case Direction.East:
+                    _currentTrack = _currentTrack.MoveEast();
+                    break;
+                case Direction.South:
+                    _currentTrack = _currentTrack.MoveSouth();
+                    break;
+                case Direction.West:
+                    _currentTrack = _currentTrack.MoveWest();
+                    break;
+                case Direction.North:
+                    _currentTrack = _currentTrack.MoveNorth();
+                    break;
+            }
         }
 
         public void OnSilence()
         {
             _lastMoves = new List<char>();
+            _currentTrack = BinaryTrack.StartEmptyTrack(_gameProps);
         }
 
         public BinaryTrack FirstPossibleTrack()
         {
-            throw new System.NotImplementedException();
+            return _currentTrack;
         }
     }
 }
