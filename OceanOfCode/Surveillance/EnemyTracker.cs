@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace OceanOfCode.Surveillance
@@ -8,7 +9,8 @@ namespace OceanOfCode.Surveillance
     * - (done) keep track of the head
     * - (done)transfer series of directions to BinaryMap
      * - (done) collect enemy's commands
-     * - Torpedo if charged and single possibility is within reach
+     * - (done)Torpedo if charged and single possibility is within reach
+     * Reset after Silence and 
      *         /*
          * TORPEDO 5 2|MOVE E
          * TORPEDO 4 1|MOVE E
@@ -23,26 +25,34 @@ namespace OceanOfCode.Surveillance
     * Use sonar to limit possible area
     * When silence is used, reset the tracker but limit the area
     */
-    public class EnemyTracker
+    public interface IEnemyTracker
+    {
+        IEnumerable<(int, int)> PossibleEnemyPositions();
+        void Next(MoveProps moveProps);
+    }
+
+    public class EnemyTracker : IEnemyTracker
     {
         private readonly GameProps _gameProps;
+        private readonly IConsole _console;
         private readonly int[,] _cartesianMap;
         private readonly BinaryTrack _binaryTrack;
         Regex _moveRegex = new Regex("MOVE (.?)");
+        Regex _silenceRegex = new Regex("SILENCE");
 
-        private List<char> _lastMoves = new List<char>();
         private BinaryTrack _currentTrack;
 
 
-        public EnemyTracker(GameProps gameProps, int[,] map)
+        public EnemyTracker(GameProps gameProps, int[,] map, IConsole console)
         {
             _gameProps = gameProps;
+            _console = console;
             _cartesianMap = map.CloneMap();
             _binaryTrack = BinaryTrack.FromCartesian(gameProps, map);
             _currentTrack = BinaryTrack.StartEmptyTrack(gameProps);
         }
 
-        public IEnumerable<BinaryTrack> PossibleMatches(BinaryTrack currentPossibleTrack)
+        public IEnumerable<BinaryTrack> PossibleTracks(BinaryTrack currentPossibleTrack)
         {
             BinaryTrack nextPossibleTrack = currentPossibleTrack;
             do
@@ -60,9 +70,14 @@ namespace OceanOfCode.Surveillance
             } while (nextPossibleTrack.TryShiftSouth(out nextPossibleTrack));
         }
 
-        public IEnumerable<BinaryTrack> PossibleMatches()
+        public IEnumerable<BinaryTrack> PossibleTracks()
         {
-            return PossibleMatches(_currentTrack);
+            return PossibleTracks(_currentTrack);
+        }
+
+        public IEnumerable<(int, int)> PossibleEnemyPositions()
+        {
+            return PossibleTracks().Where(x => x.Head.HasValue).Select(x => x.Head.Value);
         }
 
 
@@ -87,7 +102,7 @@ namespace OceanOfCode.Surveillance
 
         public void OnSilence()
         {
-            _lastMoves = new List<char>();
+            _console.Debug("Opponent silence detected. Resetting enemy's starting position");
             _currentTrack = BinaryTrack.StartEmptyTrack(_gameProps);
         }
 
@@ -107,11 +122,12 @@ namespace OceanOfCode.Surveillance
                     char moveDirection = regexResult.Groups[1].Value.ToCharArray()[0];
                     OnMove(moveDirection);
                 }
+
+                else if (_silenceRegex.Match(order).Success)
+                {
+                    OnSilence();
+                }
             }
-            
-         
         }
     }
-
-   
 }

@@ -1,4 +1,4 @@
-
+﻿
 
 using System;
 using System.Collections.Generic;
@@ -81,18 +81,133 @@ namespace OceanOfCode
         }
     }
 
+    public class TorpedoController
+    {
+        private readonly GameProps _gameProps;
+        private readonly IEnemyTracker _enemyTracker;
+        private readonly IConsole _console;
+        private int[,] _map;
+
+        public TorpedoController(GameProps gameProps, IEnemyTracker enemyTracker, MapScanner mapScanner,
+            IConsole console)
+        {
+            _gameProps = gameProps;
+            _enemyTracker = enemyTracker;
+            _console = console;
+            _map = mapScanner.GetMapOrScan();
+        }
+
+        public bool TryFireTorpedo(MoveProps moveProps, out (int, int)? target)
+        {
+            target = null;
+            if (moveProps.TorpedoCooldown != 0)
+            {
+                _console.Debug("Torpedo not charged. Skipped.");
+                return false;
+            }
+            var positions = _enemyTracker.PossibleEnemyPositions().ToList();
+            if (positions.Count > 1)
+            {
+                string debugMessage = "Torpedo skipped. Too many candidates: ";
+                foreach (var p in positions)
+                {
+                    debugMessage = $"{debugMessage}({p.Item1},{p.Item2}), ";
+                }
+                _console.Debug(debugMessage);
+                return false;
+            }
+
+            if (positions.Count == 0)
+            {
+                _console.Debug("Torpedo not fired as there is no possible enemy location");
+                return false;
+            }
+            
+            var positionsWithinRange = CalculateTorpedoRange(moveProps.MyPosition);
+
+            var commonPositions = positions.Intersect(positionsWithinRange).ToList();
+            if (!commonPositions.Any())
+            {
+                var neighbouringCells = FindNeighbouringCells(positions.First());
+                commonPositions = neighbouringCells.Intersect(positionsWithinRange).ToList();
+                if (commonPositions.Any())
+                {
+                    target = commonPositions.First();
+                    return true;
+                }
+                _console.Debug("Torpedo not fired as the opponent isn't within range.");
+                return false;
+            }
+            
+
+            target = commonPositions.First();
+            return true;
+        }
+
+        private List<(int,int)> FindNeighbouringCells((int, int) position)
+        {
+            var neighbours = new Dictionary<(int,int),(int,int)>();
+            var (x, y) = position;
+
+            for (int i = -1; i <= 1; i++)
+            {
+                for (int j = -1; j <= 1; j++)
+                {
+                    if (i == 0 && j == 0)
+                    {
+                        continue;
+                    }
+                    SafeAddPositionsInRange(neighbours, (x + i, y + j));
+                }
+            }
+
+            return neighbours.Select(p => p.Value).ToList();
+        }
+
+        public List<(int, int)> CalculateTorpedoRange((int, int) myPosition)
+        {
+            var (x, y) = myPosition;
+            var positionsInRange = new Dictionary<(int,int),(int,int)>();
+            int i,j;
+            for (int max = 4; max > 0; max--)
+            {
+                for (i = 0; i <= max; i++)
+                {
+                    j = max - i;
+                    SafeAddPositionsInRange(positionsInRange, (x + i, y + j));
+                    SafeAddPositionsInRange(positionsInRange, (x + i, y - j));
+                    SafeAddPositionsInRange(positionsInRange, (x - i, y + j));
+                    SafeAddPositionsInRange(positionsInRange, (x - i, y - j));
+                }
+            }
+
+            return positionsInRange.Values.Where(positions => _map[positions.Item1, positions.Item2] == 0).ToList();
+        }
+
+        private void SafeAddPositionsInRange(Dictionary<(int, int), (int, int)> positionsInRange, (int, int) position)
+        {
+            var (x1, y1) = position;
+            if (x1 >= 0 && x1 < _gameProps.Width && y1 >= 0 && y1 < _gameProps.Height)
+            {
+                positionsInRange[position] = position;
+            }
+        }
+    }
     class Submarine
     {
         readonly List<string> _actions = new List<string>();
         private INavigator _navigator;
-        private readonly EnemyTracker _enemyTracker;
+        private readonly IEnemyTracker _enemyTracker;
         private readonly IConsole _console;
+        private readonly TorpedoController _torpedoController;
 
-        public Submarine(INavigator navigator, EnemyTracker enemyTracker, IConsole console)
+        public Submarine(INavigator navigator, IEnemyTracker enemyTracker, IConsole console,
+            TorpedoController torpedoController)
         {
             _navigator = navigator;
             _enemyTracker = enemyTracker;
             _console = console;
+            _torpedoController = torpedoController;
         }
 
         public void Start()
@@ -105,9 +220,10 @@ namespace OceanOfCode
         public void Next(MoveProps moveProps)
         {
             _enemyTracker.Next(moveProps);
-            if (moveProps.TorpedoCooldown == 0)
+
+            if (_torpedoController.TryFireTorpedo(moveProps, out var torpedoTarget))
             {
-                //Torpedo(_enemyTracker.GuessEnemyLocation(moveProps));
+                Torpedo(torpedoTarget.Value);
             }
 
             var (x, y) = moveProps.MyPosition;
@@ -208,8 +324,9 @@ namespace OceanOfCode
             _console.Debug(_gameProps);
             _mapScanner = new MapScanner(_gameProps, _console);
             _moveStrategy = new PreComputedSpiralNavigator(_mapScanner, _console, reversedModeOn:true, _gameProps);
-            _enemyTracker = new EnemyTracker(_gameProps, _mapScanner.GetMapOrScan());
-            _submarine = new Submarine(_moveStrategy, _enemyTracker, _console);
+            _enemyTracker = new EnemyTracker(_gameProps, _mapScanner.GetMapOrScan(), console);
+            var torpedoController = new TorpedoController(_gameProps, _enemyTracker, _mapScanner, _console);
+            _submarine = new Submarine(_moveStrategy, _enemyTracker, _console, torpedoController);
             _submarine.Start();
         }
         
