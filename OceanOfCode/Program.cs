@@ -119,7 +119,7 @@ namespace OceanOfCode
 
             if (positions.Count == 0)
             {
-                _console.Debug("Torpedo not fired as there is no possible enemy location");
+                _console.Debug($"Torpedo not fired as there is no possible enemy location {_enemyTracker.Debug()}");
                 return false;
             }
             
@@ -135,7 +135,7 @@ namespace OceanOfCode
                     target = commonPositions.First();
                     return true;
                 }
-                _console.Debug("Torpedo not fired as the opponent isn't within range.");
+                _console.Debug($"Torpedo not fired as the opponent isn't within range. Enemy position is ({positions.First()}). Debug:{_enemyTracker.Debug()}");
                 return false;
             }
             

@@ -150,7 +150,7 @@ namespace OceanOfCode.Tests
             }
 
             [Test]
-            public void Move_East()
+            public void Move_East_Initial()
             {
                 BinaryTrack sut = BinaryTrack.StartEmptyTrack(_gameProps);
             
@@ -198,6 +198,44 @@ namespace OceanOfCode.Tests
                 Assert.AreEqual((14,0), output.Head);
                 var map = output.ToCartesian();
                 MapAssert.AllCoordinatesAreZeroExcept(map, (12, 1),(12, 0), (13,0), (14,0));
+            }
+            
+            [Test]
+            public void Move_East_NoShiftNeeded_CanMove()
+            {
+                var shape = new[]
+                {
+                    "............X.x",
+                    "............xxx",
+                    "...............",
+                    "...............",
+                };
+                BinaryTrack sut = BinaryTrack.FromString(_gameProps, shape);
+            
+                var output = sut.MoveEast();
+            
+                Assert.AreEqual((13,0), output.Head);
+                var map = output.ToCartesian();
+                MapAssert.AllCoordinatesAreZeroExcept(map, (12, 0),(13, 0), (14,0), (12,1), (13, 1), (14, 1));
+            }
+            
+            [Test]
+            public void Move_East_ShiftNeeded()
+            {
+                var shape = new[]
+                {
+                    "............xxX",
+                    "............xx.",
+                    "...............",
+                    "...............",
+                };
+                BinaryTrack sut = BinaryTrack.FromString(_gameProps, shape);
+            
+                var output = sut.MoveEast();
+            
+                Assert.AreEqual((14,0), output.Head);
+                var map = output.ToCartesian();
+                MapAssert.AllCoordinatesAreZeroExcept(map, (11,0),(12, 0),(13, 0), (14,0), (11,1), (12, 1));
             }
             
             [Test]
@@ -250,6 +288,24 @@ namespace OceanOfCode.Tests
                 var map = output.ToCartesian();
                 MapAssert.AllCoordinatesAreZeroExcept(map, (12, 0), (13, 0), (13, 1), (13, 2), (13, 3));
             }
+            [Test]
+            public void Move_South_NoShiftNeeded()
+            {
+                var shape = new[]
+                {
+                    "...............",
+                    ".............xx",
+                    ".............Xx",
+                    "..............x",
+                };
+                BinaryTrack sut = BinaryTrack.FromString(_gameProps, shape);
+            
+                var output = sut.MoveSouth();
+            
+                Assert.AreEqual((13, 3), output.Head);
+                var map = output.ToCartesian();
+                MapAssert.AllCoordinatesAreZeroExcept(map, (13, 1), (14, 1), (13, 2), (14, 2), (13,3), (14, 3));
+            }
             
             [Test]
             public void Move_West_Initial()
@@ -280,6 +336,45 @@ namespace OceanOfCode.Tests
                 Assert.AreEqual((11,0), output.Head);
                 var map = output.ToCartesian();
                 MapAssert.AllCoordinatesAreZeroExcept(map, (11,0), (12,0), (13, 0), (13, 1));
+            }
+            
+            
+            [Test]
+            public void Move_West_NoShiftNeeded_CanMove()
+            {
+                var shape = new[]
+                {
+                    "...............",
+                    "...............",
+                    "x.X............",
+                    "xxx............",
+                };
+                BinaryTrack sut = BinaryTrack.FromString(_gameProps, shape);
+            
+                var output = sut.MoveWest();
+            
+                Assert.AreEqual((1,2), output.Head);
+                var map = output.ToCartesian();
+                MapAssert.AllCoordinatesAreZeroExcept(map, (0,2), (0,3), (1, 2), (1, 3), (2,2), (2,3));
+            }
+            
+            [Test]
+            public void Move_West_ShiftNeeded()
+            {
+                var shape = new[]
+                {
+                    ".xx............",
+                    "Xxx............",
+                    "...............",
+                    "...............",
+                };
+                BinaryTrack sut = BinaryTrack.FromString(_gameProps, shape);
+            
+                var output = sut.MoveWest();
+            
+                Assert.AreEqual((0,1), output.Head);
+                var map = output.ToCartesian();
+                MapAssert.AllCoordinatesAreZeroExcept(map, (2,0), (3,0), (0, 1), (1, 1), (2,1), (3,1));
             }
             
             [Test]

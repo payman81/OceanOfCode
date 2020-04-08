@@ -132,6 +132,8 @@ namespace OceanOfCode.Tests
             
                 Assert.AreEqual((9,1), result.Head);
                 MapAssert.AllCoordinatesAreZeroExcept(map, (0,0), (1,0), (1,1), (2,1), (2,0), (3,0), (4,0), (5,0),(6,0), (7,0), (8,0), (9,0), (9,1));
+
+                Console.WriteLine(_sut.Debug());
             }
         }
         
@@ -139,6 +141,25 @@ namespace OceanOfCode.Tests
 
     public class EnemyOrderTests
     {
+        private ConsoleMock _console;
+        private GameProps _gameProps;
+        private EnemyTracker _sut;
+
+        [SetUp]
+        public void Setup()
+        {
+            _console = new ConsoleMock();
+            _gameProps = new GameProps {Width = 15, Height = 4, MyId = 0};
+
+            _console.Record(".............xx");
+            _console.Record(".............xx");
+            _console.Record("......xx.......");
+            _console.Record("......xx.......");
+            var mapScanner = new MapScanner(_gameProps, _console);
+            _sut = new EnemyTracker(_gameProps, mapScanner.GetMapOrScan(), _console);
+        }
+
+        
         /*
          *
          * TORPEDO 5 2|MOVE E
@@ -157,7 +178,7 @@ namespace OceanOfCode.Tests
             
             //move
             Regex r = new Regex("MOVE (.?)");
-            var x = r.Match("MOVE E");
+            var x = r.Match("MOVE W SILENCE");
 
             foreach (var g in x.Groups)
             {
@@ -181,6 +202,20 @@ namespace OceanOfCode.Tests
             {
                 Console.WriteLine(g);
             }
+        }
+
+        [Test]
+        public void TestInputParsing()
+        {
+            
+
+            string input = "MOVE W SILENCE";
+            _sut.Next(new MoveProps
+            {
+                MyPosition = (0,0),
+                OpponentOrders = input,
+                TorpedoCooldown = 0
+            });
         }
     }
 }
