@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Text;
+
 // ReSharper disable ConvertNullableToShortForm
 
 namespace OceanOfCode.Surveillance
@@ -102,6 +103,16 @@ namespace OceanOfCode.Surveillance
             return false;
         }
 
+        public bool HasHeadCollisionWith(BinaryTrack headFilter)
+        {
+            if (!_head.HasValue)
+                return false;
+            var (x, y) = _head.Value;
+            var data = new short[_gameProps.Height];
+            data[y] = (short) Math.Pow(2, _gameProps.Width - x -1);
+            var headBinaryMap = new BinaryTrack(_gameProps, data, _head);
+            return headBinaryMap.HasCollisionWith(headFilter);
+        }
         public static BinaryTrack StartEmptyTrack(GameProps gameProps)
         {
             short[] binaryMap = new short[gameProps.Height];
@@ -368,5 +379,13 @@ namespace OceanOfCode.Surveillance
         {
             return new BinaryTrack(gameProps, data, head);
         }
+
+        public static BinaryTrack FromAnotherBinaryTrack(BinaryTrack another)
+        {
+            var data = new short[another._gameProps.Height];
+            Array.Copy(another._binaryMap, data, another._gameProps.Height);
+            return new BinaryTrack(another._gameProps, data, another.Head);
+        }
+
     }
 }

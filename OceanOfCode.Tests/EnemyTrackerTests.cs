@@ -70,10 +70,62 @@ namespace OceanOfCode.Tests
                 foreach (var possibleMatch in possibleMatches)
                 {
                     Console.WriteLine();
-                    Console.WriteLine(possibleMatch);
+                    Console.WriteLine(possibleMatch.Head);
                 }
                 
                 Assert.AreEqual(14, possibleMatches.Count);
+            }
+
+            [Test]
+            public void FetchPossibleMatches_Filter1()
+            {
+                _sut.OnMove(Direction.North);
+                _sut.OnMove(Direction.East);
+                _sut.OnMove(Direction.East);
+                _sut.OnMove(Direction.South);
+                _sut.OnMove(Direction.South);
+                _sut.OnMove(Direction.East);
+
+                string[] filterStr =
+                {
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxx.xxxxxxxxxxx",
+                };
+                BinaryTrack filter= BinaryTrack.FromString(_gameProps, filterStr);
+                
+                
+                var possibleMatches = _sut.PossibleTracksWithHeadFilter(filter).ToList();
+                
+                Assert.AreEqual(1, possibleMatches.Count);
+                Assert.AreEqual((3,3), possibleMatches.First().Head.Value);
+            }
+            
+            [Test]
+            public void FetchPossibleMatches_Filter2()
+            {
+                _sut.OnMove(Direction.North);
+                _sut.OnMove(Direction.East);
+                _sut.OnMove(Direction.East);
+                _sut.OnMove(Direction.South);
+                _sut.OnMove(Direction.South);
+                _sut.OnMove(Direction.East);
+
+                string[] filterStr =
+                {
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxx.x",
+                    "xxxxxxxxxxxxxxx",
+                };
+                BinaryTrack filter= BinaryTrack.FromString(_gameProps, filterStr);
+                
+                
+                var possibleMatches = _sut.PossibleTracksWithHeadFilter(filter).ToList();
+                
+                Assert.AreEqual(1, possibleMatches.Count);
+                Assert.AreEqual((13,2), possibleMatches.First().Head.Value);
             }
         }
 

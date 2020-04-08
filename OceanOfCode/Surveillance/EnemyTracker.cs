@@ -4,27 +4,6 @@ using System.Text.RegularExpressions;
 
 namespace OceanOfCode.Surveillance
 {
-    /* MVP:
-    * - (done) check for possibilities 
-    * - (done) keep track of the head
-    * - (done)transfer series of directions to BinaryMap
-     * - (done) collect enemy's commands
-     * - (done)Torpedo if charged and single possibility is within reach
-     * Reset after Silence and 
-     *         /*
-         * TORPEDO 5 2|MOVE E
-         * TORPEDO 4 1|MOVE E
-         * NA
-         * SURFACE 7
-         * SILENCE
-         * SONAR 4
-         *
-    * Next:
-    * watch my life to detect I was hit by torpedo to limit possible area 
-    * watch for opponent surface to limit possible areas
-    * Use sonar to limit possible area
-    * When silence is used, reset the tracker but limit the area
-    */
     public interface IEnemyTracker
     {
         IEnumerable<(int, int)> PossibleEnemyPositions();
@@ -87,6 +66,29 @@ namespace OceanOfCode.Surveillance
             return PossibleTracks(_currentTrack);
         }
 
+        public IEnumerable<BinaryTrack> PossibleTracksWithHeadFilter(BinaryTrack headFilter)
+        {
+            BinaryTrack currentPossibleTrack = BinaryTrack.FromAnotherBinaryTrack(_currentTrack);
+            BinaryTrack nextPossibleTrack = currentPossibleTrack;
+            do
+            {
+                currentPossibleTrack = nextPossibleTrack;
+                do
+                {
+                    if (!nextPossibleTrack.HasCollisionWith(_binaryMap))
+                    {
+                        if (!nextPossibleTrack.HasHeadCollisionWith(headFilter))
+                        {
+                            yield return nextPossibleTrack;
+                        }
+                        
+                    }
+                } while (nextPossibleTrack.TryShiftEast(out nextPossibleTrack));
+
+                nextPossibleTrack = currentPossibleTrack;
+            } while (nextPossibleTrack.TryShiftSouth(out nextPossibleTrack));
+        }
+        
         public IEnumerable<(int, int)> PossibleEnemyPositions()
         {
             if (_exactEnemyTrack != null)
@@ -100,6 +102,7 @@ namespace OceanOfCode.Surveillance
             }
             return possibleTracks.Where(x => x.Head.HasValue).Select(x => x.Head.Value);
         }
+
 
 
         public void OnMove(char direction)
@@ -177,5 +180,6 @@ namespace OceanOfCode.Surveillance
         {
             return new EnemyTracker(gameProps, binaryMap, currentTrack, console);
         }
+
     }
 }
