@@ -381,42 +381,4 @@ namespace OceanOfCode
             return _path.Next().Position;
         }
     }
-
-    public static class NavigatorExtensions
-    {
-        public static (int, int) FindPositionWhenIMove(this (int, int) currentPosition, char direction)
-        {
-            var (x, y) = currentPosition;
-            switch (direction)
-            {
-                case Direction.East:
-                    return (x + 1, y);
-                case Direction.South:
-                    return (x, y + 1);
-                case Direction.West:
-                    return (x - 1, y);
-                case Direction.North:
-                    return (x, y - 1);
-            }
-
-            throw new Exception("Incorrect direction given");
-        }
-
-        public static char ToOpposite(this char direction)
-        {
-            switch (direction)
-            {
-                case Direction.East:
-                    return Direction.West;
-                case Direction.South:
-                    return Direction.North;
-                case Direction.West:
-                    return Direction.East;
-                case Direction.North:
-                    return Direction.South;
-                default:
-                    return default;
-            }
-        }
-    }
 }

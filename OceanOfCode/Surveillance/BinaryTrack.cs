@@ -387,5 +387,9 @@ namespace OceanOfCode.Surveillance
             return new BinaryTrack(another._gameProps, data, another.Head);
         }
 
+        public static BinaryTrack FromEmpty(GameProps gameProps)
+        {
+            return new BinaryTrack(gameProps, new short[gameProps.Height], null);
+        }
     }
 }

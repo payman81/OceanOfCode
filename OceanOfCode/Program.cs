@@ -34,6 +34,91 @@ namespace OceanOfCode
 
             return availableCellCount;
         }
+        
+        public static (int, int) FindPositionWhenIMove(this (int, int) currentPosition, char direction)
+        {
+            var (x, y) = currentPosition;
+            switch (direction)
+            {
+                case Direction.East:
+                    return (x + 1, y);
+                case Direction.South:
+                    return (x, y + 1);
+                case Direction.West:
+                    return (x - 1, y);
+                case Direction.North:
+                    return (x, y - 1);
+            }
+
+            throw new Exception("Incorrect direction given");
+        }
+
+        public static char ToOpposite(this char direction)
+        {
+            switch (direction)
+            {
+                case Direction.East:
+                    return Direction.West;
+                case Direction.South:
+                    return Direction.North;
+                case Direction.West:
+                    return Direction.East;
+                case Direction.North:
+                    return Direction.South;
+                default:
+                    return default;
+            }
+        }
+        
+        public static List<(int,int)> FindNeighbouringCells(this (int, int) position, GameProps gameProps)
+        {
+            var neighbours = new Dictionary<(int,int),(int,int)>();
+            var (x, y) = position;
+
+            for (int i = -1; i <= 1; i++)
+            {
+                for (int j = -1; j <= 1; j++)
+                {
+                    if (i == 0 && j == 0)
+                    {
+                        continue;
+                    }
+                    SafeAddPositionsInRange(neighbours, (x + i, y + j), gameProps);
+                }
+            }
+
+            return neighbours.Select(p => p.Value).ToList();
+        }
+
+        public static List<(int, int)> CalculateTorpedoRange(this (int, int) myPosition, GameProps gameProps, int[,] map)
+        {
+            var (x, y) = myPosition;
+            var positionsInRange = new Dictionary<(int,int),(int,int)>();
+            int i,j;
+            for (int max = 4; max > 0; max--)
+            {
+                for (i = 0; i <= max; i++)
+                {
+                    j = max - i;
+                    SafeAddPositionsInRange(positionsInRange, (x + i, y + j), gameProps);
+                    SafeAddPositionsInRange(positionsInRange, (x + i, y - j), gameProps);
+                    SafeAddPositionsInRange(positionsInRange, (x - i, y + j), gameProps);
+                    SafeAddPositionsInRange(positionsInRange, (x - i, y - j), gameProps);
+                }
+            }
+
+            return positionsInRange.Values.Where(positions => map[positions.Item1, positions.Item2] == 0).ToList();
+        }
+
+        private static void SafeAddPositionsInRange(Dictionary<(int, int), (int, int)> positionsInRange, (int, int) position, GameProps gameProps)
+        {
+            var (x1, y1) = position;
+            if (x1 >= 0 && x1 < gameProps.Width && y1 >= 0 && y1 < gameProps.Height)
+            {
+                positionsInRange[position] = position;
+            }
+        }
+        
     }
 
     public class MoveProps
@@ -123,12 +208,12 @@ namespace OceanOfCode
                 return false;
             }
             
-            var positionsWithinRange = CalculateTorpedoRange(moveProps.MyPosition);
+            var positionsWithinRange = moveProps.MyPosition.CalculateTorpedoRange(_gameProps, _map);
 
             var commonPositions = positions.Intersect(positionsWithinRange).ToList();
             if (!commonPositions.Any())
             {
-                var neighbouringCells = FindNeighbouringCells(positions.First());
+                var neighbouringCells = positions.First().FindNeighbouringCells(_gameProps);
                 commonPositions = neighbouringCells.Intersect(positionsWithinRange).ToList();
                 if (commonPositions.Any())
                 {
@@ -144,54 +229,7 @@ namespace OceanOfCode
             return true;
         }
 
-        private List<(int,int)> FindNeighbouringCells((int, int) position)
-        {
-            var neighbours = new Dictionary<(int,int),(int,int)>();
-            var (x, y) = position;
-
-            for (int i = -1; i <= 1; i++)
-            {
-                for (int j = -1; j <= 1; j++)
-                {
-                    if (i == 0 && j == 0)
-                    {
-                        continue;
-                    }
-                    SafeAddPositionsInRange(neighbours, (x + i, y + j));
-                }
-            }
-
-            return neighbours.Select(p => p.Value).ToList();
-        }
-
-        public List<(int, int)> CalculateTorpedoRange((int, int) myPosition)
-        {
-            var (x, y) = myPosition;
-            var positionsInRange = new Dictionary<(int,int),(int,int)>();
-            int i,j;
-            for (int max = 4; max > 0; max--)
-            {
-                for (i = 0; i <= max; i++)
-                {
-                    j = max - i;
-                    SafeAddPositionsInRange(positionsInRange, (x + i, y + j));
-                    SafeAddPositionsInRange(positionsInRange, (x + i, y - j));
-                    SafeAddPositionsInRange(positionsInRange, (x - i, y + j));
-                    SafeAddPositionsInRange(positionsInRange, (x - i, y - j));
-                }
-            }
-
-            return positionsInRange.Values.Where(positions => _map[positions.Item1, positions.Item2] == 0).ToList();
-        }
-
-        private void SafeAddPositionsInRange(Dictionary<(int, int), (int, int)> positionsInRange, (int, int) position)
-        {
-            var (x1, y1) = position;
-            if (x1 >= 0 && x1 < _gameProps.Width && y1 >= 0 && y1 < _gameProps.Height)
-            {
-                positionsInRange[position] = position;
-            }
-        }
+        
     }
     class Submarine
     {
@@ -324,7 +362,8 @@ namespace OceanOfCode
             _console.Debug(_gameProps);
             _mapScanner = new MapScanner(_gameProps, _console);
             _moveStrategy = new PreComputedSpiralNavigator(_mapScanner, _console, reversedModeOn:true, _gameProps);
-            _enemyTracker = new EnemyTracker(_gameProps, _mapScanner.GetMapOrScan(), console);
+            var headPositionReducer = new HeadPositionReducer(_gameProps);
+            _enemyTracker = new EnemyTracker(_gameProps, _mapScanner.GetMapOrScan(), console, headPositionReducer);
             var torpedoController = new TorpedoController(_gameProps, _enemyTracker, _mapScanner, _console);
             _submarine = new Submarine(_moveStrategy, _enemyTracker, _console, torpedoController);
             _submarine.Start();

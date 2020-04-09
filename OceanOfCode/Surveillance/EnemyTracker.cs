@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Resources;
 using System.Text.RegularExpressions;
 
 namespace OceanOfCode.Surveillance
@@ -17,27 +18,31 @@ namespace OceanOfCode.Surveillance
         private readonly IConsole _console;
         private readonly int[,] _cartesianMap;
         private readonly BinaryTrack _binaryMap;
+        private readonly HeadPositionReducer _headPositionReducer;
         
         Regex _moveRegex = new Regex("^MOVE (.?)");
         Regex _silenceRegex = new Regex("^SILENCE");
         Regex _surfaceRegex = new Regex("^SURFACE (.?)");
+        Regex _torpedoRegex = new Regex("^TORPEDO ([0-9]{1,2}) ([0-9]{1,2})");
 
         private BinaryTrack _currentTrack;
         private BinaryTrack _exactEnemyTrack = null;
 
 
-        private EnemyTracker(GameProps gameProps, BinaryTrack binaryMap, BinaryTrack currentTrack, IConsole console)
+        private EnemyTracker(GameProps gameProps, BinaryTrack binaryMap, BinaryTrack currentTrack, IConsole console, HeadPositionReducer headPositionReducer)
         {
             _console = console;
+            _headPositionReducer = headPositionReducer;
             _gameProps = gameProps;
             _binaryMap = binaryMap;
             _currentTrack = currentTrack;
             _cartesianMap = binaryMap.ToCartesian();
         }
-        public EnemyTracker(GameProps gameProps, int[,] map, IConsole console)
+        public EnemyTracker(GameProps gameProps, int[,] map, IConsole console, HeadPositionReducer headPositionReducer)
         {
             _gameProps = gameProps;
             _console = console;
+            _headPositionReducer = headPositionReducer;
             _cartesianMap = map.CloneMap();
             _binaryMap = BinaryTrack.FromCartesian(gameProps, map);
             _currentTrack = BinaryTrack.StartEmptyTrack(gameProps);
@@ -63,12 +68,12 @@ namespace OceanOfCode.Surveillance
 
         public IEnumerable<BinaryTrack> PossibleTracks()
         {
-            return PossibleTracks(_currentTrack);
+            return PossibleTracksWithHeadFilter(_currentTrack, _headPositionReducer.HeadFilter);
         }
 
-        public IEnumerable<BinaryTrack> PossibleTracksWithHeadFilter(BinaryTrack headFilter)
+        public IEnumerable<BinaryTrack> PossibleTracksWithHeadFilter(BinaryTrack currentTrack, BinaryTrack headFilter)
         {
-            BinaryTrack currentPossibleTrack = BinaryTrack.FromAnotherBinaryTrack(_currentTrack);
+            BinaryTrack currentPossibleTrack = BinaryTrack.FromAnotherBinaryTrack(currentTrack);
             BinaryTrack nextPossibleTrack = currentPossibleTrack;
             do
             {
@@ -103,8 +108,6 @@ namespace OceanOfCode.Surveillance
             return possibleTracks.Where(x => x.Head.HasValue).Select(x => x.Head.Value);
         }
 
-
-
         public void OnMove(char direction)
         {
             switch (direction)
@@ -126,6 +129,7 @@ namespace OceanOfCode.Surveillance
                     _exactEnemyTrack = _exactEnemyTrack?.MoveNorth();
                     break;
             }
+            _headPositionReducer.Handle(new MoveDetected{Direction = direction});
         }
 
         public void OnSilence()
@@ -167,7 +171,19 @@ namespace OceanOfCode.Surveillance
                 {
                     OnSurface(null);
                 }
+                else if(_torpedoRegex.Match(order).Success)
+                {
+                    var torpedoRegex = _torpedoRegex.Match(order);
+                    var x = int.Parse(torpedoRegex.Groups[1].Value);
+                    var y = int.Parse(torpedoRegex.Groups[2].Value);
+                    OnTorpedo(new TorpedoDetected() {Target = (x, y)});
+                }
             }
+        }
+
+        private void OnTorpedo(TorpedoDetected torpedoDetected)
+        {
+            _headPositionReducer.Handle(torpedoDetected);
         }
 
 
@@ -176,10 +192,63 @@ namespace OceanOfCode.Surveillance
             return $"binaryMap:{_binaryMap.Debug()} opponentTrack:{_currentTrack.Debug()}";
         }
 
-        public static EnemyTracker FromDebug(GameProps gameProps, BinaryTrack binaryMap, BinaryTrack currentTrack, IConsole console)
+        public static EnemyTracker FromDebug(GameProps gameProps, BinaryTrack binaryMap, BinaryTrack currentTrack, IConsole console, HeadPositionReducer headPositionReducer)
         {
-            return new EnemyTracker(gameProps, binaryMap, currentTrack, console);
+            return new EnemyTracker(gameProps, binaryMap, currentTrack, console, headPositionReducer);
+        }
+    }
+
+    public class TorpedoDetected
+    {
+        public (int,int) Target { get; set; }
+    }
+
+    public class MoveDetected
+    {
+        public char Direction { get; set; }
+    }
+
+    public class SurfaceDetected
+    {
+        public int Segment { get; set; }
+    }
+
+    public class SilenceDetected
+    {
+    }
+
+    public class HeadPositionReducer
+    {
+        private readonly GameProps _gameProps;
+        private BinaryTrack _filter;
+
+        public BinaryTrack HeadFilter => _filter;
+        public HeadPositionReducer(GameProps gameProps)
+        {
+            _gameProps = gameProps;
+            Reset();
+        }
+        public void Handle(TorpedoDetected torpedoDetected)
+        {
+            var (targetX, targetY) = torpedoDetected.Target;
+            
         }
 
+        public void Handle(MoveDetected moveDetected)
+        {
+            
+        }
+
+        public void Handle(SilenceDetected _)
+        {
+            //todo: Strech possible heads by 4 cells in all direction
+            Reset();
+        }
+
+        private void Reset()
+        {
+            _filter = BinaryTrack.FromEmpty(_gameProps);
+
+        }
     }
 }

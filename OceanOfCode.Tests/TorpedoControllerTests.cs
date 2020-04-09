@@ -23,15 +23,14 @@ namespace OceanOfCode.Tests
             _console.Record("......xx.......");
             _mapScanner = new MapScanner(_gameProps, _console);
             
-            _enemyTracker = new EnemyTracker(_gameProps, _mapScanner.GetMapOrScan(), _console);
+            var headPositionReducer = new HeadPositionReducer(_gameProps);
+            _enemyTracker = new EnemyTracker(_gameProps, _mapScanner.GetMapOrScan(), _console, headPositionReducer);
         }
         
         [Test]
         public void CalculateCorrectRange_NoIslands()
         {
-            TorpedoController sut = new TorpedoController(_gameProps,_enemyTracker, _mapScanner, _console);
-
-            var positionsInRange = sut.CalculateTorpedoRange((0, 0));
+            var positionsInRange = (0, 0).CalculateTorpedoRange(_gameProps, _mapScanner.GetMapOrScan());
             
             CollectionAssert.AreEquivalent(new[]
             {
@@ -45,9 +44,7 @@ namespace OceanOfCode.Tests
         [Test]
         public void CalculateCorrectRange_MustAvoidIslands()
         {
-            TorpedoController sut = new TorpedoController(_gameProps,_enemyTracker, _mapScanner, _console);
-
-            var positionsInRange = sut.CalculateTorpedoRange((8, 2));
+            var positionsInRange = (8, 2).CalculateTorpedoRange(_gameProps, _mapScanner.GetMapOrScan());
             
             CollectionAssert.DoesNotContain(positionsInRange, (6,2));
             CollectionAssert.DoesNotContain(positionsInRange, (6,3));
@@ -58,9 +55,8 @@ namespace OceanOfCode.Tests
         [Test, Ignore("Must change range calculation to pass this test")]
         public void CalculateCorrectRange_MustNotReturnPositionsIfJumpedOverIslands()
         {
-            TorpedoController sut = new TorpedoController(_gameProps,_enemyTracker, _mapScanner, _console);
 
-            var positionsInRange = sut.CalculateTorpedoRange((8, 2));
+            var positionsInRange = (8, 2).CalculateTorpedoRange(_gameProps, _mapScanner.GetMapOrScan());
             CollectionAssert.DoesNotContain(positionsInRange, (5,2));
         }
 

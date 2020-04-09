@@ -13,6 +13,7 @@ namespace OceanOfCode.Tests
             private ConsoleMock _console;
             private GameProps _gameProps;
             private EnemyTracker _sut;
+            private HeadPositionReducer _headPositionReducer;
 
             [SetUp]
             public void Setup()
@@ -25,7 +26,8 @@ namespace OceanOfCode.Tests
                 _console.Record("......xx.......");
                 _console.Record("......xx.......");
                 var mapScanner = new MapScanner(_gameProps, _console);
-                _sut = new EnemyTracker(_gameProps, mapScanner.GetMapOrScan(), _console);
+                _headPositionReducer = new HeadPositionReducer(_gameProps);
+                _sut = new EnemyTracker(_gameProps, mapScanner.GetMapOrScan(), _console, _headPositionReducer);
             }
         
             [Test]
@@ -40,7 +42,7 @@ namespace OceanOfCode.Tests
                 };
 
                 BinaryTrack trackBinary = BinaryTrack.FromString(_gameProps, shape);
-                var possibleMatches = _sut.PossibleTracks(trackBinary).ToList();
+                var possibleMatches = _sut.PossibleTracksWithHeadFilter(trackBinary, BinaryTrack.FromEmpty(_gameProps)).ToList();
 
                 Console.WriteLine($"Total number of matches: {possibleMatches.Count}");
                 foreach (var possibleMatch in possibleMatches)
@@ -96,7 +98,7 @@ namespace OceanOfCode.Tests
                 BinaryTrack filter= BinaryTrack.FromString(_gameProps, filterStr);
                 
                 
-                var possibleMatches = _sut.PossibleTracksWithHeadFilter(filter).ToList();
+                var possibleMatches = _sut.PossibleTracksWithHeadFilter(_sut.FirstPossibleTrack(), filter).ToList();
                 
                 Assert.AreEqual(1, possibleMatches.Count);
                 Assert.AreEqual((3,3), possibleMatches.First().Head.Value);
@@ -122,7 +124,7 @@ namespace OceanOfCode.Tests
                 BinaryTrack filter= BinaryTrack.FromString(_gameProps, filterStr);
                 
                 
-                var possibleMatches = _sut.PossibleTracksWithHeadFilter(filter).ToList();
+                var possibleMatches = _sut.PossibleTracksWithHeadFilter(_sut.FirstPossibleTrack(), filter).ToList();
                 
                 Assert.AreEqual(1, possibleMatches.Count);
                 Assert.AreEqual((13,2), possibleMatches.First().Head.Value);
@@ -147,7 +149,8 @@ namespace OceanOfCode.Tests
                 _console.Record("......xx.......");
                 var mapScanner = new MapScanner(_gameProps, _console);
             
-                _sut = new EnemyTracker(_gameProps, mapScanner.GetMapOrScan(), _console);
+                var headPositionReducer = new HeadPositionReducer(_gameProps);
+                _sut = new EnemyTracker(_gameProps, mapScanner.GetMapOrScan(), _console, headPositionReducer);
             }
             
             [Test]
@@ -208,7 +211,8 @@ namespace OceanOfCode.Tests
             _console.Record("......xx.......");
             _console.Record("......xx.......");
             var mapScanner = new MapScanner(_gameProps, _console);
-            _sut = new EnemyTracker(_gameProps, mapScanner.GetMapOrScan(), _console);
+            var headPositionReducer = new HeadPositionReducer(_gameProps);
+            _sut = new EnemyTracker(_gameProps, mapScanner.GetMapOrScan(), _console, headPositionReducer);
         }
 
         
@@ -241,19 +245,14 @@ namespace OceanOfCode.Tests
         [Test]
         public void Test_Silence_Regex()
         {
-            Regex r = new Regex("SILENCE");
-            var x = r.Match("SILENCE");
+            Regex r = new Regex("TORPEDO ([0-9]{1,2}) ([0-9]{1,2})");
+            var x = r.Match("TORPEDO 12 14");
 
             foreach (Group g in x.Groups)
             {
                 Console.WriteLine(g);
             }
 
-            var match = r.Match("MOVE E");
-            foreach (var g in match.Groups)
-            {
-                Console.WriteLine(g);
-            }
         }
 
         [Test]
