@@ -176,7 +176,7 @@ namespace OceanOfCode.Surveillance
                     var torpedoRegex = _torpedoRegex.Match(order);
                     var x = int.Parse(torpedoRegex.Groups[1].Value);
                     var y = int.Parse(torpedoRegex.Groups[2].Value);
-                    OnTorpedo(new TorpedoDetected() {Target = (x, y)});
+                    OnTorpedo(new TorpedoDetected() {Target = (x, y), MoveProps = moveProps});
                 }
             }
         }
@@ -201,6 +201,7 @@ namespace OceanOfCode.Surveillance
     public class TorpedoDetected
     {
         public (int,int) Target { get; set; }
+        public MoveProps MoveProps { get; set; }
     }
 
     public class MoveDetected
@@ -221,17 +222,30 @@ namespace OceanOfCode.Surveillance
     {
         private readonly GameProps _gameProps;
         private BinaryTrack _filter;
+        private int[,] _map; 
 
         public BinaryTrack HeadFilter => _filter;
-        public HeadPositionReducer(GameProps gameProps)
+        public HeadPositionReducer(GameProps gameProps, MapScanner mapScanner)
         {
+            _map = mapScanner.GetMapOrScan();
+            _gameProps = gameProps;
+            Reset();
+        }
+        
+        //For testing
+        public HeadPositionReducer(GameProps gameProps, int[,] map)
+        {
+            _map = map;
             _gameProps = gameProps;
             Reset();
         }
         public void Handle(TorpedoDetected torpedoDetected)
         {
-            var (targetX, targetY) = torpedoDetected.Target;
-            
+            var inRangePositions = torpedoDetected.Target.CalculateTorpedoRange(_gameProps, _map);
+            inRangePositions.Remove(torpedoDetected.MoveProps.MyPosition);
+            var torpedoRangeFilter = BinaryTrack.FromAllOneExcept(_gameProps, inRangePositions);
+
+            _filter = _filter.BinaryOr(torpedoRangeFilter);
         }
 
         public void Handle(MoveDetected moveDetected)

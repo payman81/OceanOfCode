@@ -7,7 +7,6 @@ namespace OceanOfCode.Tests
     public class TorpedoControllerTests
     {
         private ConsoleMock _console;
-        private EnemyTracker _enemyTracker;
         private GameProps _gameProps;
         private MapScanner _mapScanner;
 
@@ -22,9 +21,6 @@ namespace OceanOfCode.Tests
             _console.Record("......xx.......");
             _console.Record("......xx.......");
             _mapScanner = new MapScanner(_gameProps, _console);
-            
-            var headPositionReducer = new HeadPositionReducer(_gameProps);
-            _enemyTracker = new EnemyTracker(_gameProps, _mapScanner.GetMapOrScan(), _console, headPositionReducer);
         }
         
         [Test]

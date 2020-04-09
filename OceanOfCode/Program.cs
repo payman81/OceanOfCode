@@ -362,7 +362,7 @@ namespace OceanOfCode
             _console.Debug(_gameProps);
             _mapScanner = new MapScanner(_gameProps, _console);
             _moveStrategy = new PreComputedSpiralNavigator(_mapScanner, _console, reversedModeOn:true, _gameProps);
-            var headPositionReducer = new HeadPositionReducer(_gameProps);
+            var headPositionReducer = new HeadPositionReducer(_gameProps, _mapScanner);
             _enemyTracker = new EnemyTracker(_gameProps, _mapScanner.GetMapOrScan(), console, headPositionReducer);
             var torpedoController = new TorpedoController(_gameProps, _enemyTracker, _mapScanner, _console);
             _submarine = new Submarine(_moveStrategy, _enemyTracker, _console, torpedoController);

@@ -1,5 +1,6 @@
 using System.Linq;
 using NUnit.Framework;
+using OceanOfCode.Surveillance;
 
 namespace OceanOfCode.Tests
 {
@@ -74,6 +75,12 @@ namespace OceanOfCode.Tests
         public static void AllCoordinatesAreOne(int[,] map)
         {
             AllCoordinatesAreOneExcept(map);
+        }
+
+        public static void MatchesShape(GameProps gameProps, BinaryTrack actual, string[] expectedResultShape)
+        {
+            var expected = BinaryTrack.FromString(gameProps, expectedResultShape);
+            CollectionAssert.AreEqual(expected.ToCartesian(), actual.ToCartesian());
         }
     }
 }

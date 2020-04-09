@@ -26,7 +26,7 @@ namespace OceanOfCode.Tests
                 _console.Record("......xx.......");
                 _console.Record("......xx.......");
                 var mapScanner = new MapScanner(_gameProps, _console);
-                _headPositionReducer = new HeadPositionReducer(_gameProps);
+                _headPositionReducer = new HeadPositionReducer(_gameProps, mapScanner);
                 _sut = new EnemyTracker(_gameProps, mapScanner.GetMapOrScan(), _console, _headPositionReducer);
             }
         
@@ -149,7 +149,7 @@ namespace OceanOfCode.Tests
                 _console.Record("......xx.......");
                 var mapScanner = new MapScanner(_gameProps, _console);
             
-                var headPositionReducer = new HeadPositionReducer(_gameProps);
+                var headPositionReducer = new HeadPositionReducer(_gameProps, mapScanner);
                 _sut = new EnemyTracker(_gameProps, mapScanner.GetMapOrScan(), _console, headPositionReducer);
             }
             
@@ -211,7 +211,7 @@ namespace OceanOfCode.Tests
             _console.Record("......xx.......");
             _console.Record("......xx.......");
             var mapScanner = new MapScanner(_gameProps, _console);
-            var headPositionReducer = new HeadPositionReducer(_gameProps);
+            var headPositionReducer = new HeadPositionReducer(_gameProps, mapScanner);
             _sut = new EnemyTracker(_gameProps, mapScanner.GetMapOrScan(), _console, headPositionReducer);
         }
 

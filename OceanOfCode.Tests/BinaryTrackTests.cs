@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Security.Cryptography.X509Certificates;
 using NUnit.Framework;
 using OceanOfCode.Surveillance;
 
@@ -408,6 +410,65 @@ namespace OceanOfCode.Tests
                 MapAssert.AllCoordinatesAreZeroExcept(map, (0, 0), (1, 0), (1,1),(2,1),(2,0));
             }
         }
-        
+
+        public class BitwiseOperationsTests
+        {
+            private GameProps _gameProps;
+
+            [SetUp]
+            public void SetUp()
+            {
+                _gameProps = new GameProps {Width = 15, Height = 4, MyId = 0};
+
+            }
+
+            [Test]
+            public void BinaryOrTest()
+            {
+                string[] shape1 =
+                {
+                    "x..............",
+                    ".x.............",
+                    "..x............",
+                    "...x...........",
+                };
+                string[] shape2 =
+                {
+                    "..............x",
+                    ".............x.",
+                    "............x..",
+                    "...........x...",
+                };
+                var t1 = BinaryTrack.FromString(_gameProps, shape1);
+                var t2 = BinaryTrack.FromString(_gameProps, shape2);
+
+                var result = t1.BinaryOr(t2);
+
+                string[] resultShape =
+                {
+                    "x.............x",
+                    ".x...........x.",
+                    "..x.........x..",
+                    "...x.......x...",
+                };
+                MapAssert.MatchesShape(_gameProps, result, resultShape);
+            }
+
+            [Test]
+            public void FromAllOneExcept()
+            {
+                string[] expected =
+                {
+                    "xx.xxxxxxxxxxxx",
+                    "..xxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                };
+                var result = BinaryTrack.FromAllOneExcept(_gameProps, new List<(int, int)> {(0, 1), (1, 1), (2, 0)});
+
+                MapAssert.MatchesShape(_gameProps, result, expected);
+            }
+        }
+
     }
 }

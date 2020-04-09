@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
@@ -390,6 +391,33 @@ namespace OceanOfCode.Surveillance
         public static BinaryTrack FromEmpty(GameProps gameProps)
         {
             return new BinaryTrack(gameProps, new short[gameProps.Height], null);
+        }
+
+        public static BinaryTrack FromAllOneExcept(GameProps gameProps, List<(int, int)> inRangePositions)
+        {
+            var data = new short[gameProps.Height];
+            
+            for (int j = 0; j < data.Length; j++)
+            {
+                data[j] = short.MaxValue;
+            }
+
+            foreach (var position in inRangePositions)
+            {
+                var (x, y) = position;
+                data[y] = (short)(data[y] ^ (short)Math.Pow(2, gameProps.Width - x - 1));
+            }
+            return new BinaryTrack(gameProps, data, null);
+        }
+
+        public BinaryTrack BinaryOr(BinaryTrack another)
+        {
+            var data = new short[_gameProps.Height];
+            for (int j = 0; j < _binaryMap.Length; j++)
+            {
+                data[j] = (short) (_binaryMap[j] | another._binaryMap[j]);
+            }
+            return new BinaryTrack(_gameProps, data, null);
         }
     }
 }
