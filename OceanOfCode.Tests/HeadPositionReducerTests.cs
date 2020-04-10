@@ -65,8 +65,7 @@ namespace OceanOfCode.Tests
             
             MapAssert.MatchesShape(_gameProps, _sut.HeadFilter, expected) ;
         }
-        
-        
+
         [Test]
         public void TorpedoDetected_ThenMoveEastDetected_CorrectRangeIsReturned()
         {
@@ -179,6 +178,35 @@ namespace OceanOfCode.Tests
                 "xxxxxxxxxxxxxxx"
             }; 
             
+            MapAssert.MatchesShape(_gameProps, _sut.HeadFilter, expected) ;
+        }
+
+        [Test]
+        public void SilenceDetected_LastMoveDirectionIsNorth_PadsTheFilterBy4InAllDirectionsExceptSouth()
+        {
+            _sut.Handle(new TorpedoDetected{Target = (7,4)});
+            _sut.Handle(new SilenceDetected{LastMoveDirection = Direction.North});
+            Console.WriteLine(_sut.HeadFilter);
+            
+            string[] expected =
+            {
+                "xxx.........xxx",
+                "xx...........xx",
+                "x.....xx......x",
+                "......xx.......",
+                "...............",
+                "...............",
+                "x.............x",
+                "xx...........xx",
+                "xxx.........xxx",
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxxxxxxxxxx"
+            };
+
             MapAssert.MatchesShape(_gameProps, _sut.HeadFilter, expected) ;
         }
         

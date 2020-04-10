@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using OceanOfCode.Surveillance;
 
@@ -188,23 +189,24 @@ namespace OceanOfCode
             if (moveProps.TorpedoCooldown != 0)
             {
                 _console.Debug("Torpedo not charged. Skipped.");
+                var positionsDebug = _enemyTracker.PossibleEnemyPositions().ToList();
+                Log(positionsDebug, _enemyTracker);
                 return false;
             }
             var positions = _enemyTracker.PossibleEnemyPositions().ToList();
             if (positions.Count > 1)
             {
-                string debugMessage = "Torpedo skipped. Too many candidates: ";
-                foreach (var p in positions)
-                {
-                    debugMessage = $"{debugMessage}({p.Item1},{p.Item2}), ";
-                }
+                string debugMessage = "Torpedo skipped. Too many candidates. ";
+                
                 _console.Debug(debugMessage);
+                Log(positions, _enemyTracker);
                 return false;
             }
 
             if (positions.Count == 0)
             {
-                _console.Debug($"Torpedo not fired as there is no possible enemy location {_enemyTracker.Debug()}");
+                _console.Debug("Torpedo not fired as there is no possible enemy location");
+                Log(positions, _enemyTracker);
                 return false;
             }
             
@@ -220,7 +222,8 @@ namespace OceanOfCode
                     target = commonPositions.First();
                     return true;
                 }
-                _console.Debug($"Torpedo not fired as the opponent isn't within range. Enemy position is ({positions.First()}). Debug:{_enemyTracker.Debug()}");
+                _console.Debug($"Torpedo not fired as the opponent isn't within range");
+                Log(positions, _enemyTracker);
                 return false;
             }
             
@@ -229,7 +232,24 @@ namespace OceanOfCode
             return true;
         }
 
-        
+        private void Log(List<(int, int)> positions, IEnemyTracker enemyTracker)
+        {
+            if (positions.Count == 1)
+            {
+                _console.Debug($"Enemy exact location is {positions.First()}");
+            }
+
+            if (positions.Count > 1)
+            {
+                var debugMessage = "Possible enemy positions are:";
+                foreach (var p in positions)
+                {
+                    debugMessage = $"{debugMessage}({p.Item1},{p.Item2}), ";
+                }
+                _console.Debug(debugMessage);
+            }
+            _console.Debug("EnemyTracker state: " +  _enemyTracker.Debug());
+        }
     }
     class Submarine
     {

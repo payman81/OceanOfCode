@@ -68,8 +68,25 @@ namespace OceanOfCode.Tests
             
             MapAssert.AllCoordinatesAreZeroExcept(map, (0,0), (3,0), (1,1), (2,1));
         }
+        
+        [Test]
+        public void FromAllZero()
+        {
+            var gameProps = new GameProps{Height = 4, Width = 15, MyId = 0};
+            var position = (1, 1);
+            var actual = BinaryTrack.FromAllZeroExcept(gameProps, new List<(int, int)>{position}, position);
 
-
+            string[] expected =
+            {
+                "...............",
+                ".X.............",
+                "...............",
+                "...............",
+            };
+                
+            MapAssert.MatchesShape(gameProps, actual, expected);
+        }
+        
         public class BinaryTrackShiftTests
         {
             

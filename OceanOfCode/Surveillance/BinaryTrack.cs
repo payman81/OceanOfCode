@@ -385,6 +385,18 @@ namespace OceanOfCode.Surveillance
             }
             return new BinaryTrack(gameProps, data, null);
         }
+        
+        public static BinaryTrack FromAllZeroExcept(GameProps gameProps, List<(int, int)> inRangePositions, (int, int)? head)
+        {
+            var data = new short[gameProps.Height];
+
+            foreach (var position in inRangePositions)
+            {
+                var (x, y) = position;
+                data[y] = (short)(data[y] | (short)Math.Pow(2, gameProps.Width - x - 1));
+            }
+            return new BinaryTrack(gameProps, data, head);
+        }
 
         public BinaryTrack BinaryOr(BinaryTrack another)
         {
@@ -392,6 +404,16 @@ namespace OceanOfCode.Surveillance
             for (int j = 0; j < _binaryMap.Length; j++)
             {
                 data[j] = (short) (_binaryMap[j] | another._binaryMap[j]);
+            }
+            return new BinaryTrack(_gameProps, data, null);
+        }
+        
+        public BinaryTrack BinaryAnd(BinaryTrack another)
+        {
+            var data = new short[_gameProps.Height];
+            for (int j = 0; j < _binaryMap.Length; j++)
+            {
+                data[j] = (short) (_binaryMap[j] & another._binaryMap[j]);
             }
             return new BinaryTrack(_gameProps, data, null);
         }
@@ -447,5 +469,6 @@ namespace OceanOfCode.Surveillance
 
             return sb.ToString();
         }
+
     }
 }

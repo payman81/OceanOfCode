@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
@@ -29,7 +30,7 @@ namespace OceanOfCode.Tests
                 _headPositionReducer = new HeadPositionReducer(_gameProps, mapScanner);
                 _sut = new EnemyTracker(_gameProps, mapScanner.GetMapOrScan(), _console, _headPositionReducer);
             }
-        
+
             [Test]
             public void FetchPossibleMatches_StartFromDifferentPath()
             {

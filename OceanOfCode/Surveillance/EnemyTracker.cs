@@ -1,6 +1,6 @@
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
-using System.Resources;
 using System.Text.RegularExpressions;
 
 namespace OceanOfCode.Surveillance
@@ -27,15 +27,17 @@ namespace OceanOfCode.Surveillance
 
         private BinaryTrack _currentTrack;
         private BinaryTrack _exactEnemyTrack = null;
+        private char _lastMoveDirection = Direction.None;
 
 
-        private EnemyTracker(GameProps gameProps, BinaryTrack binaryMap, BinaryTrack currentTrack, IConsole console, HeadPositionReducer headPositionReducer)
+        private EnemyTracker(GameProps gameProps, BinaryTrack binaryMap, BinaryTrack currentTrack, BinaryTrack exactTrack, IConsole console, HeadPositionReducer headPositionReducer)
         {
             _console = console;
             _headPositionReducer = headPositionReducer;
             _gameProps = gameProps;
             _binaryMap = binaryMap;
             _currentTrack = currentTrack;
+            _exactEnemyTrack = exactTrack;
             _cartesianMap = binaryMap.ToCartesian();
         }
         public EnemyTracker(GameProps gameProps, int[,] map, IConsole console, HeadPositionReducer headPositionReducer)
@@ -110,6 +112,7 @@ namespace OceanOfCode.Surveillance
 
         public void OnMove(char direction)
         {
+            _lastMoveDirection = direction;
             switch (direction)
             {
                 case Direction.East:
@@ -138,13 +141,14 @@ namespace OceanOfCode.Surveillance
             
             _currentTrack = BinaryTrack.StartEmptyTrack(_gameProps);
             _exactEnemyTrack = null;
-            _headPositionReducer.Handle(new SilenceDetected());
+            _headPositionReducer.Handle(new SilenceDetected{LastMoveDirection = _lastMoveDirection});
         }
         
         private void OnSurface(object SurfaceDetected)
         {
             _console.Debug("Opponent surface detected. Resetting enemy's track keeping the head");
             _currentTrack = BinaryTrack.StartEmptyTrack(_gameProps);
+            _exactEnemyTrack = BinaryTrack.FromAllZeroExcept(_gameProps, new List<(int, int)>{_exactEnemyTrack.Head.Value}, _exactEnemyTrack.Head);
         }
 
         public BinaryTrack FirstPossibleTrack()
@@ -190,12 +194,18 @@ namespace OceanOfCode.Surveillance
 
         public string Debug()
         {
-            return $"binaryMap:{_binaryMap.Debug()} opponentTrack:{_currentTrack.Debug()}";
+            var debug = $"binaryMap:{_binaryMap.Debug()} opponentTrack:{_currentTrack.Debug()} ";
+            if (_exactEnemyTrack != null)
+            {
+                debug = debug + $"exactTrack:{_exactEnemyTrack.Debug()}";
+            }
+
+            return debug;
         }
 
-        public static EnemyTracker FromDebug(GameProps gameProps, BinaryTrack binaryMap, BinaryTrack currentTrack, IConsole console, HeadPositionReducer headPositionReducer)
+        public static EnemyTracker FromDebug(GameProps gameProps, BinaryTrack binaryMap, BinaryTrack currentTrack, BinaryTrack exactTrack, IConsole console, HeadPositionReducer headPositionReducer)
         {
-            return new EnemyTracker(gameProps, binaryMap, currentTrack, console, headPositionReducer);
+            return new EnemyTracker(gameProps, binaryMap, currentTrack, exactTrack, console, headPositionReducer);
         }
     }
 
@@ -216,6 +226,7 @@ namespace OceanOfCode.Surveillance
 
     public class SilenceDetected
     {
+        public char LastMoveDirection { get; set; }
     }
 
     public class HeadPositionReducer
@@ -298,10 +309,41 @@ namespace OceanOfCode.Surveillance
             return track.BinaryOr(_mapFilter);
         }
 
-        public void Handle(SilenceDetected _)
+        public void Handle(SilenceDetected silenceDetected)
         {
-            //todo: Strech possible heads by 4 cells in all direction
-            Reset();
+            BinaryTrack nextPaddedEast = _filter;
+            BinaryTrack nextPaddedSouth = _filter;
+            BinaryTrack nextPaddedWest = _filter;
+            BinaryTrack nextPaddedNorth = _filter;
+            var directionToAvoidPadding = silenceDetected.LastMoveDirection.ToOpposite();
+            for (int i = 0; i < 4; i++)
+            {
+                if (!directionToAvoidPadding.Equals(Direction.East))
+                {
+                    nextPaddedEast = nextPaddedEast.ShiftEast(defaultBitsToOne: true);
+                    _filter = _filter.BinaryAnd(nextPaddedEast);
+                }
+
+                if (!directionToAvoidPadding.Equals(Direction.South))
+                {
+                    nextPaddedSouth = nextPaddedSouth.ShiftSouth(defaultBitsToOne: true);
+                    _filter = _filter.BinaryAnd(nextPaddedSouth);
+                }
+
+                if (!directionToAvoidPadding.Equals(Direction.West))
+                {
+                    nextPaddedWest = nextPaddedWest.ShiftWest(defaultBitsToOne: true);
+                    _filter = _filter.BinaryAnd(nextPaddedWest);
+                }
+
+                if (!directionToAvoidPadding.Equals(Direction.North))
+                {
+                    nextPaddedNorth = nextPaddedNorth.ShiftNorth(defaultBitsToOne: true);
+                    _filter = _filter.BinaryAnd(nextPaddedNorth);
+                }
+            }
+
+            _filter = _filter.BinaryOr(_mapFilter);
         }
 
         private void Reset()
