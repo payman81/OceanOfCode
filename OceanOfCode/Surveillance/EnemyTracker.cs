@@ -181,11 +181,19 @@ namespace OceanOfCode.Surveillance
                 else if (_silenceRegex.Match(order).Success)
                 {
                     silenceDetected = true;
+                    if (silenceDetected)
+                    {
+                        OnSilence();
+                    }
                 }
                 else if (_surfaceRegex.Match(order).Success)
                 {
                     var sectorString = _surfaceRegex.Match(order).Groups[1].Value;
                     surfaceDetected = new SurfaceDetected{Sector = int.Parse(sectorString)};
+                    if (surfaceDetected != null)
+                    {
+                        OnSurface(surfaceDetected);
+                    }
                 }
                 else if(_torpedoRegex.Match(order).Success)
                 {
@@ -193,22 +201,11 @@ namespace OceanOfCode.Surveillance
                     var x = int.Parse(torpedoRegex.Groups[1].Value);
                     var y = int.Parse(torpedoRegex.Groups[2].Value);
                     torpedoDetected = new TorpedoDetected {Target = (x, y)};
+                    if (torpedoDetected != null)
+                    {
+                        OnTorpedo(torpedoDetected);
+                    }
                 }
-            }
-
-            if (surfaceDetected != null)
-            {
-                OnSurface(surfaceDetected);
-            }
-
-            if (torpedoDetected != null)
-            {
-                OnTorpedo(torpedoDetected);
-            }
-
-            if (silenceDetected)
-            {
-                OnSilence();
             }
         }
 
