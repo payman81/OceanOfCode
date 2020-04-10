@@ -182,7 +182,7 @@ namespace OceanOfCode
             _map = mapScanner.GetMapOrScan();
         }
 
-        public bool TryFireTorpedo(MoveProps moveProps, out (int, int)? target)
+        public bool TryFireTorpedo(MoveProps moveProps, (int, int) myNextPosition, out (int, int)? target)
         {
             target = null;
             if (moveProps.TorpedoCooldown != 0)
@@ -208,7 +208,7 @@ namespace OceanOfCode
                 return false;
             }
             
-            var positionsWithinRange = moveProps.MyPosition.CalculateTorpedoRange(_gameProps, _map);
+            var positionsWithinRange = myNextPosition.CalculateTorpedoRange(_gameProps, _map);
 
             var commonPositions = positions.Intersect(positionsWithinRange).ToList();
             if (!commonPositions.Any())
@@ -258,21 +258,21 @@ namespace OceanOfCode
         public void Next(MoveProps moveProps)
         {
             _enemyTracker.Next(moveProps);
-
-            if (_torpedoController.TryFireTorpedo(moveProps, out var torpedoTarget))
+            
+            var next = _navigator.Next(moveProps.MyPosition);
+            
+            if (_torpedoController.TryFireTorpedo(moveProps, next?.Position ?? moveProps.MyPosition, out var torpedoTarget))
             {
                 Torpedo(torpedoTarget.Value);
             }
 
-            var (x, y) = moveProps.MyPosition;
-            var next = _navigator.Next((x, y));
             if (next == null)
             {
                 Surface();
             }
             else
             {
-                Move(next.Value);
+                Move(next.Direction);
             }
 
             ExecuteActions();
@@ -325,9 +325,14 @@ namespace OceanOfCode
         public const char None = default;
     }
 
+    public class NavigationResult
+    {
+        public char Direction { get; set; }
+        public (int,int) Position { get; set; }
+    }
     public interface INavigator
     {
-        char? Next((int, int) currentPosition);
+        NavigationResult Next((int, int) currentPosition);
         void Reset();
         (int, int) First();
     }

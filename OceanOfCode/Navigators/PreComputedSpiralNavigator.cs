@@ -366,9 +366,15 @@ namespace OceanOfCode
             _path = new ComputedPath(mapScanner.GetMapOrScan(), console, reversedModeOn, gameProps);
         }
 
-        public char? Next((int, int) currentPosition)
+        public NavigationResult Next((int, int) currentPosition)
         {
-            return _path.Next(currentPosition)?.Direction;
+            var next = _path.Next(currentPosition);
+            if (next == null)
+            {
+                return null;
+            }
+
+            return new NavigationResult {Direction = next.Direction, Position = next.Destination.Position};
         }
 
         public void Reset()

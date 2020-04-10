@@ -138,6 +138,7 @@ namespace OceanOfCode.Surveillance
             
             _currentTrack = BinaryTrack.StartEmptyTrack(_gameProps);
             _exactEnemyTrack = null;
+            _headPositionReducer.Handle(new SilenceDetected());
         }
         
         private void OnSurface(object SurfaceDetected)
@@ -238,6 +239,7 @@ namespace OceanOfCode.Surveillance
         {
             _map = map;
             _gameProps = gameProps;
+            _mapFilter = BinaryTrack.FromCartesian(gameProps, _map);
             Reset();
         }
         public void Handle(TorpedoDetected torpedoDetected)

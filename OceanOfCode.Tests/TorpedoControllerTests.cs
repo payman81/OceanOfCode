@@ -67,7 +67,7 @@ namespace OceanOfCode.Tests
 
             enemyTracker.Setup(x => x.PossibleEnemyPositions()).Returns(enemyPossibleLocations);
 
-            sut.TryFireTorpedo(new MoveProps {MyPosition = myPosition, TorpedoCooldown = 0}, out var target);
+            sut.TryFireTorpedo(new MoveProps {TorpedoCooldown = 0}, myPosition, out var target);
             Assert.AreEqual((3,1), target);
         }
         
@@ -82,7 +82,7 @@ namespace OceanOfCode.Tests
 
             enemyTracker.Setup(x => x.PossibleEnemyPositions()).Returns(enemyPossibleLocations);
 
-            sut.TryFireTorpedo(new MoveProps {MyPosition = myPosition, TorpedoCooldown = 0}, out var target);
+            sut.TryFireTorpedo(new MoveProps {TorpedoCooldown = 0}, myPosition, out var target);
             Assert.AreEqual((4, 0), target);
         }
         
@@ -97,7 +97,7 @@ namespace OceanOfCode.Tests
 
             enemyTracker.Setup(x => x.PossibleEnemyPositions()).Returns(enemyPossibleLocations);
 
-            sut.TryFireTorpedo(new MoveProps {MyPosition = myPosition, TorpedoCooldown = 0}, out var target);
+            sut.TryFireTorpedo(new MoveProps {TorpedoCooldown = 0}, myPosition, out var target);
             Assert.IsNull(target);
         }
     }

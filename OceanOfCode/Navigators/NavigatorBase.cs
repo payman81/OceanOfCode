@@ -59,7 +59,7 @@ namespace OceanOfCode
             return Map[x, y - 1] == 0;
         }
 
-        public abstract char? Next((int, int) currentPosition);
+        public abstract NavigationResult Next((int, int) currentPosition);
 
         public virtual void Reset()
         {
