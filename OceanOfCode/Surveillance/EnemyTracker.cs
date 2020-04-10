@@ -144,7 +144,7 @@ namespace OceanOfCode.Surveillance
             _headPositionReducer.Handle(new SilenceDetected{LastMoveDirection = _lastMoveDirection});
         }
         
-        private void OnSurface(object SurfaceDetected)
+        private void OnSurface(SurfaceDetected surfaceDetected)
         {
             _console.Debug("Opponent surface detected. Resetting enemy's track keeping the head");
             _currentTrack = BinaryTrack.StartEmptyTrack(_gameProps);
@@ -153,6 +153,8 @@ namespace OceanOfCode.Surveillance
                 _exactEnemyTrack = BinaryTrack.FromAllZeroExcept(_gameProps,
                     new List<(int, int)> {_exactEnemyTrack.Head.Value}, _exactEnemyTrack.Head);
             }
+            
+            _headPositionReducer.Handle(surfaceDetected);
         }
 
         public BinaryTrack FirstPossibleTrack()
@@ -163,6 +165,10 @@ namespace OceanOfCode.Surveillance
         public void Next(MoveProps moveProps)
         {
             var orders = moveProps.OpponentOrders.Split('|');
+            SurfaceDetected surfaceDetected = null;
+            TorpedoDetected torpedoDetected = null;
+            bool silenceDetected = false;
+            
             foreach (var order in orders)
             {
                 var regexResult = _moveRegex.Match(order);
@@ -174,19 +180,35 @@ namespace OceanOfCode.Surveillance
 
                 else if (_silenceRegex.Match(order).Success)
                 {
-                    OnSilence();
+                    silenceDetected = true;
                 }
                 else if (_surfaceRegex.Match(order).Success)
                 {
-                    OnSurface(null);
+                    var sectorString = _surfaceRegex.Match(order).Groups[1].Value;
+                    surfaceDetected = new SurfaceDetected{Sector = int.Parse(sectorString)};
                 }
                 else if(_torpedoRegex.Match(order).Success)
                 {
                     var torpedoRegex = _torpedoRegex.Match(order);
                     var x = int.Parse(torpedoRegex.Groups[1].Value);
                     var y = int.Parse(torpedoRegex.Groups[2].Value);
-                    OnTorpedo(new TorpedoDetected {Target = (x, y)});
+                    torpedoDetected = new TorpedoDetected {Target = (x, y)};
                 }
+            }
+
+            if (surfaceDetected != null)
+            {
+                OnSurface(surfaceDetected);
+            }
+
+            if (torpedoDetected != null)
+            {
+                OnTorpedo(torpedoDetected);
+            }
+
+            if (silenceDetected)
+            {
+                OnSilence();
             }
         }
 
@@ -225,7 +247,7 @@ namespace OceanOfCode.Surveillance
 
     public class SurfaceDetected
     {
-        public int Segment { get; set; }
+        public int Sector { get; set; }
     }
 
     public class SilenceDetected
@@ -246,9 +268,10 @@ namespace OceanOfCode.Surveillance
             _map = mapScanner.GetMapOrScan();
             _gameProps = gameProps;
             _mapFilter = BinaryTrack.FromCartesian(gameProps, _map);
+            
             Reset();
         }
-        
+
         //For testing
         public HeadPositionReducer(GameProps gameProps, int[,] map)
         {
@@ -354,6 +377,14 @@ namespace OceanOfCode.Surveillance
         {
             _filter = BinaryTrack.FromEmpty(_gameProps);
 
+        }
+
+        public void Handle(SurfaceDetected surfaceDetected)
+        {
+            _filter = _filter
+                .BinaryOr(BinaryTrack.FromSector(surfaceDetected.Sector))
+                .BinaryOr(_mapFilter);
+            
         }
     }
 }

@@ -13,6 +13,19 @@ namespace OceanOfCode.Surveillance
         private readonly short[] _binaryMap;
         private readonly (int, int)? _head;
 
+        private static Dictionary<int, BinaryTrack> _precomputedSectorFilters =new Dictionary<int, BinaryTrack>
+        {
+            {1,new BinaryTrack(new GameProps {Height = 15, Width = 15},new short[]{1023, 1023, 1023, 1023, 1023, 32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767,32767}, null)},
+            {2,new BinaryTrack(new GameProps {Height = 15, Width = 15},new short[]{31775,31775,31775,31775,31775,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767}, null)},
+            {3,new BinaryTrack(new GameProps {Height = 15, Width = 15},new short[]{32736,32736,32736,32736,32736,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767}, null)},
+            {4,new BinaryTrack(new GameProps {Height = 15, Width = 15},new short[]{32767,32767,32767,32767,32767,1023,1023,1023,1023,1023,32767,32767,32767,32767,32767}, null)},
+            {5,new BinaryTrack(new GameProps {Height = 15, Width = 15},new short[]{32767,32767,32767,32767,32767,31775,31775,31775,31775,31775,32767,32767,32767,32767,32767}, null)},
+            {6,new BinaryTrack(new GameProps {Height = 15, Width = 15},new short[]{2767,32767,32767,32767,32767,32736,32736,32736,32736,32736,32767,32767,32767,32767,32767}, null)},
+            {7,new BinaryTrack(new GameProps {Height = 15, Width = 15},new short[]{32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,1023,1023,1023,1023,1023}, null)},
+            {8,new BinaryTrack(new GameProps {Height = 15, Width = 15},new short[]{32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,31775,31775,31775,31775,31775}, null)},
+            {9,new BinaryTrack(new GameProps {Height = 15, Width = 15},new short[]{32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32736,32736,32736,32736,32736}, null)},
+        };
+
         private BinaryTrack(GameProps gameProps, (int, int)? head)
         {
             _gameProps = gameProps;
@@ -396,6 +409,11 @@ namespace OceanOfCode.Surveillance
                 data[y] = (short)(data[y] | (short)Math.Pow(2, gameProps.Width - x - 1));
             }
             return new BinaryTrack(gameProps, data, head);
+        }
+
+        public static BinaryTrack FromSector(int sector)
+        {
+            return _precomputedSectorFilters[sector];
         }
 
         public BinaryTrack BinaryOr(BinaryTrack another)

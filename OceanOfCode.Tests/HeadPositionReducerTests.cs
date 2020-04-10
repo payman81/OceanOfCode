@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Moq;
 using NUnit.Framework;
 using OceanOfCode.Surveillance;
@@ -209,6 +210,36 @@ namespace OceanOfCode.Tests
 
             MapAssert.MatchesShape(_gameProps, _sut.HeadFilter, expected) ;
         }
-        
+
+        [Test]
+        public void SurfaceDetected()
+        {
+            _sut.Handle(new TorpedoDetected{Target = (7,4)});
+            _sut.Handle(new SurfaceDetected{Sector = 2});
+            Console.WriteLine(_sut.HeadFilter);
+
+            string[] expected =
+            {
+                "xxxxxxx.xxxxxxx",
+                "xxxxxx...xxxxxx",
+                "xxxxx.xx..xxxxx",
+                "xxxxx.xx..xxxxx",
+                "xxxxx..x..xxxxx",
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxxxxxxxxxx"
+            }; 
+            
+            MapAssert.MatchesShape(_gameProps, _sut.HeadFilter, expected) ;
+            
+        }
+
     }
 }

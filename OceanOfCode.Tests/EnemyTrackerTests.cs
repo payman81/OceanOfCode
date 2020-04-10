@@ -257,17 +257,15 @@ namespace OceanOfCode.Tests
         }
 
         [Test]
-        public void TestInputParsing()
+        public void Test_Surface()
         {
-            
+            Regex r = new Regex("^SURFACE (.?)");
+            var x = r.Match("SURFACE 7");
 
-            string input = "MOVE W SILENCE";
-            _sut.Next(new MoveProps
+            foreach (Group g in x.Groups)
             {
-                MyPosition = (0,0),
-                OpponentOrders = input,
-                TorpedoCooldown = 0
-            });
+                Console.WriteLine(g);
+            }
         }
     }
 }
