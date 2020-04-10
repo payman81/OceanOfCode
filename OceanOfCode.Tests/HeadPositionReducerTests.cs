@@ -39,10 +39,9 @@ namespace OceanOfCode.Tests
         }
 
         [Test]
-        public void CorrectRangeIsReturned()
+        public void TorpedoDetected_CorrectRangeIsReturned()
         {
-            var moveProps = new MoveProps{MyPosition = (9,4)};
-            _sut.Handle(new TorpedoDetected{Target = (7,4), MoveProps = moveProps});
+            _sut.Handle(new TorpedoDetected{Target = (7,4)});
             Console.WriteLine(_sut.HeadFilter);
 
             string[] expected =
@@ -51,7 +50,7 @@ namespace OceanOfCode.Tests
                 "xxxxxx...xxxxxx",
                 "xxxxx.xx..xxxxx",
                 "xxxx..xx...xxxx",
-                "xxx....x.x..xxx",
+                "xxx....x....xxx",
                 "xxxx.......xxxx",
                 "xxxxx.....xxxxx",
                 "xxxxxx...xxxxxx",
@@ -66,5 +65,122 @@ namespace OceanOfCode.Tests
             
             MapAssert.MatchesShape(_gameProps, _sut.HeadFilter, expected) ;
         }
+        
+        
+        [Test]
+        public void TorpedoDetected_ThenMoveEastDetected_CorrectRangeIsReturned()
+        {
+            _sut.Handle(new TorpedoDetected{Target = (7,4)});
+            _sut.Handle(new MoveDetected{Direction = Direction.East});
+            Console.WriteLine(_sut.HeadFilter);
+
+            string[] expected =
+            {
+                "xxxxxxxx.xxxxxx",
+                "xxxxxxx...xxxxx",
+                "xxxxxxxxx..xxxx",
+                "xxxxx.xxx...xxx",
+                "xxxx....x....xx",
+                "xxxxx.......xxx",
+                "xxxxxx.....xxxx",
+                "xxxxxxx...xxxxx",
+                "xxxxxxxx.xxxxxx",
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxxxxxxxxxx"
+            }; 
+            
+            MapAssert.MatchesShape(_gameProps, _sut.HeadFilter, expected) ;
+        }
+        
+        [Test]
+        public void TorpedoDetected_ThenMoveSouthDetected_CorrectRangeIsReturned()
+        {
+            _sut.Handle(new TorpedoDetected{Target = (7,4)});
+            _sut.Handle(new MoveDetected{Direction = Direction.South});
+            Console.WriteLine(_sut.HeadFilter);
+
+            string[] expected =
+            {
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxx.xxxxxxx",
+                "xxxxxxxx.xxxxxx",
+                "xxxxx.xx..xxxxx",
+                "xxxx..xx...xxxx",
+                "xxx....x....xxx",
+                "xxxx.......xxxx",
+                "xxxxx.....xxxxx",
+                "xxxxxx...xxxxxx",
+                "xxxxxxx.xxxxxxx",
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxxxxxxxxxx"
+            }; 
+            
+            MapAssert.MatchesShape(_gameProps, _sut.HeadFilter, expected) ;
+        }
+        
+        [Test]
+        public void TorpedoDetected_ThenMoveWestDetected_CorrectRangeIsReturned()
+        {
+            _sut.Handle(new TorpedoDetected{Target = (7,4)});
+            _sut.Handle(new MoveDetected{Direction = Direction.West});
+            Console.WriteLine(_sut.HeadFilter);
+
+            string[] expected =
+            {
+                "xxxxxx.xxxxxxxx",
+                "xxxxx...xxxxxxx",
+                "xxxx.xxx.xxxxxx",
+                "xxx..xxx..xxxxx",
+                "xx....x....xxxx",
+                "xxx.......xxxxx",
+                "xxxx.....xxxxxx",
+                "xxxxx...xxxxxxx",
+                "xxxxxx.xxxxxxxx",
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxxxxxxxxxx"
+            }; 
+            
+            MapAssert.MatchesShape(_gameProps, _sut.HeadFilter, expected) ;
+        }
+        [Test]
+        public void TorpedoDetected_ThenMoveNorthDetected_CorrectRangeIsReturned_()
+        {
+            _sut.Handle(new TorpedoDetected{Target = (7,4)});
+            _sut.Handle(new MoveDetected{Direction = Direction.North});
+            Console.WriteLine(_sut.HeadFilter);
+
+            string[] expected =
+            {
+                "xxxxxx...xxxxxx",
+                "xxxxx.xx..xxxxx",
+                "xxxx..xx...xxxx",
+                "xxx...xx....xxx",
+                "xxxx.......xxxx",
+                "xxxxx.....xxxxx",
+                "xxxxxx...xxxxxx",
+                "xxxxxxx.xxxxxxx",
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxxxxxxxxxx",
+                "xxxxxxxxxxxxxxx"
+            }; 
+            
+            MapAssert.MatchesShape(_gameProps, _sut.HeadFilter, expected) ;
+        }
+        
     }
 }

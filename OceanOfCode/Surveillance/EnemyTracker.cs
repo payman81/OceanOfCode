@@ -176,7 +176,7 @@ namespace OceanOfCode.Surveillance
                     var torpedoRegex = _torpedoRegex.Match(order);
                     var x = int.Parse(torpedoRegex.Groups[1].Value);
                     var y = int.Parse(torpedoRegex.Groups[2].Value);
-                    OnTorpedo(new TorpedoDetected() {Target = (x, y), MoveProps = moveProps});
+                    OnTorpedo(new TorpedoDetected {Target = (x, y)});
                 }
             }
         }
@@ -201,7 +201,6 @@ namespace OceanOfCode.Surveillance
     public class TorpedoDetected
     {
         public (int,int) Target { get; set; }
-        public MoveProps MoveProps { get; set; }
     }
 
     public class MoveDetected
@@ -222,6 +221,7 @@ namespace OceanOfCode.Surveillance
     {
         private readonly GameProps _gameProps;
         private BinaryTrack _filter;
+        private BinaryTrack _mapFilter;
         private int[,] _map; 
 
         public BinaryTrack HeadFilter => _filter;
@@ -229,6 +229,7 @@ namespace OceanOfCode.Surveillance
         {
             _map = mapScanner.GetMapOrScan();
             _gameProps = gameProps;
+            _mapFilter = BinaryTrack.FromCartesian(gameProps, _map);
             Reset();
         }
         
@@ -242,7 +243,6 @@ namespace OceanOfCode.Surveillance
         public void Handle(TorpedoDetected torpedoDetected)
         {
             var inRangePositions = torpedoDetected.Target.CalculateTorpedoRange(_gameProps, _map);
-            inRangePositions.Remove(torpedoDetected.MoveProps.MyPosition);
             var torpedoRangeFilter = BinaryTrack.FromAllOneExcept(_gameProps, inRangePositions);
 
             _filter = _filter.BinaryOr(torpedoRangeFilter);
@@ -250,7 +250,50 @@ namespace OceanOfCode.Surveillance
 
         public void Handle(MoveDetected moveDetected)
         {
-            
+            switch (moveDetected.Direction)
+            {
+                case Direction.East:
+                    _filter = ShiftFilterEast();
+                    break;
+                case Direction.South:
+                    _filter = ShiftFilterSouth();
+                    break;
+                case Direction.West:
+                    _filter = ShiftFilterWest();
+                    break;
+                case Direction.North:
+                    _filter = ShiftFilterNorth();
+                    break;
+            }
+        }
+
+       
+
+        private BinaryTrack ShiftFilterEast()
+        {
+            return _filter
+                .ShiftEast(true)
+                .BinaryOr(_mapFilter);
+        }
+
+        private BinaryTrack ShiftFilterSouth()
+        {
+            return _filter
+                .ShiftSouth(defaultBitsToOne:true)
+                .BinaryOr(_mapFilter);
+        }
+        
+        private BinaryTrack ShiftFilterWest()
+        {
+            return _filter.ShiftWest(true)
+                .BinaryOr(_mapFilter);
+        }
+        
+        private BinaryTrack ShiftFilterNorth()
+        {
+            var track = _filter
+                .ShiftNorth(defaultBitsToOne: true);
+            return track.BinaryOr(_mapFilter);
         }
 
         public void Handle(SilenceDetected _)
