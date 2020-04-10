@@ -148,7 +148,11 @@ namespace OceanOfCode.Surveillance
         {
             _console.Debug("Opponent surface detected. Resetting enemy's track keeping the head");
             _currentTrack = BinaryTrack.StartEmptyTrack(_gameProps);
-            _exactEnemyTrack = BinaryTrack.FromAllZeroExcept(_gameProps, new List<(int, int)>{_exactEnemyTrack.Head.Value}, _exactEnemyTrack.Head);
+            if (_exactEnemyTrack != null)
+            {
+                _exactEnemyTrack = BinaryTrack.FromAllZeroExcept(_gameProps,
+                    new List<(int, int)> {_exactEnemyTrack.Head.Value}, _exactEnemyTrack.Head);
+            }
         }
 
         public BinaryTrack FirstPossibleTrack()
