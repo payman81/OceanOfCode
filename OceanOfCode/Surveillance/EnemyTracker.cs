@@ -16,7 +16,6 @@ namespace OceanOfCode.Surveillance
     {
         private readonly GameProps _gameProps;
         private readonly IConsole _console;
-        private readonly int[,] _cartesianMap;
         private readonly BinaryTrack _binaryMap;
         private readonly HeadPositionReducer _headPositionReducer;
         
@@ -26,7 +25,7 @@ namespace OceanOfCode.Surveillance
         Regex _torpedoRegex = new Regex("^TORPEDO ([0-9]{1,2}) ([0-9]{1,2})");
 
         private BinaryTrack _currentTrack;
-        private BinaryTrack _exactEnemyTrack = null;
+        private BinaryTrack _exactEnemyTrack;
         private char _lastMoveDirection = Direction.None;
 
 
@@ -38,14 +37,14 @@ namespace OceanOfCode.Surveillance
             _binaryMap = binaryMap;
             _currentTrack = currentTrack;
             _exactEnemyTrack = exactTrack;
-            _cartesianMap = binaryMap.ToCartesian();
+            binaryMap.ToCartesian();
         }
         public EnemyTracker(GameProps gameProps, int[,] map, IConsole console, HeadPositionReducer headPositionReducer)
         {
             _gameProps = gameProps;
             _console = console;
             _headPositionReducer = headPositionReducer;
-            _cartesianMap = map.CloneMap();
+            map.CloneMap();
             _binaryMap = BinaryTrack.FromCartesian(gameProps, map);
             _currentTrack = BinaryTrack.StartEmptyTrack(gameProps);
         }
@@ -229,6 +228,11 @@ namespace OceanOfCode.Surveillance
         public static EnemyTracker FromDebug(GameProps gameProps, BinaryTrack binaryMap, BinaryTrack currentTrack, BinaryTrack exactTrack, IConsole console, HeadPositionReducer headPositionReducer)
         {
             return new EnemyTracker(gameProps, binaryMap, currentTrack, exactTrack, console, headPositionReducer);
+        }
+
+        public bool DoWeHaveExactEnemyLocation()
+        {
+            return _exactEnemyTrack != null;
         }
     }
 

@@ -127,6 +127,10 @@ namespace OceanOfCode
         public (int, int) MyPosition { get; set; }
         public int TorpedoCooldown { get; set; }
         public string OpponentOrders { get; set; }
+        public int MyLife { get; set; }
+        public int OpponentLife { get; set; }
+        public int SilenceCooldown { get; set; }
+        public int MineCooldown { get; set; }
 
         public override string ToString()
         {
@@ -145,28 +149,8 @@ namespace OceanOfCode
         }
     }
 
-    class EnemyTracker_OldStrategy
-    {
-        protected readonly int[,] Map;
-
-        public EnemyTracker_OldStrategy(MapScanner mapScanner)
-        {
-            Map = mapScanner.GetMapOrScan().CloneMap();
-        }
-
-        public (int, int) GuessEnemyLocation(MoveProps props)
-        {
-            var (x, y) = props.MyPosition;
-
-            if (y >= 4)
-            {
-                return (x, y - 4);
-            }
-
-            return (x, y + 4);
-        }
-    }
-
+    
+    
     public class TorpedoController
     {
         private readonly GameProps _gameProps;
@@ -190,7 +174,7 @@ namespace OceanOfCode
             {
                 _console.Debug("Torpedo not charged. Skipped.");
                 var positionsDebug = _enemyTracker.PossibleEnemyPositions().ToList();
-                Log(positionsDebug, _enemyTracker);
+                Log(positionsDebug);
                 return false;
             }
             var positions = _enemyTracker.PossibleEnemyPositions().ToList();
@@ -199,14 +183,14 @@ namespace OceanOfCode
                 string debugMessage = "Torpedo skipped. Too many candidates. ";
                 
                 _console.Debug(debugMessage);
-                Log(positions, _enemyTracker);
+                Log(positions);
                 return false;
             }
 
             if (positions.Count == 0)
             {
                 _console.Debug("Torpedo not fired as there is no possible enemy location");
-                Log(positions, _enemyTracker);
+                Log(positions);
                 return false;
             }
             
@@ -223,7 +207,7 @@ namespace OceanOfCode
                     return true;
                 }
                 _console.Debug($"Torpedo not fired as the opponent isn't within range");
-                Log(positions, _enemyTracker);
+                Log(positions);
                 return false;
             }
             
@@ -232,7 +216,7 @@ namespace OceanOfCode
             return true;
         }
 
-        private void Log(List<(int, int)> positions, IEnemyTracker enemyTracker)
+        private void Log(List<(int, int)> positions)
         {
             if (positions.Count == 1)
             {
@@ -258,14 +242,16 @@ namespace OceanOfCode
         private readonly IEnemyTracker _enemyTracker;
         private readonly IConsole _console;
         private readonly TorpedoController _torpedoController;
+        private readonly ChargeController _chargeController;
 
         public Submarine(INavigator navigator, IEnemyTracker enemyTracker, IConsole console,
-            TorpedoController torpedoController)
+            TorpedoController torpedoController, ChargeController chargeController )
         {
             _navigator = navigator;
             _enemyTracker = enemyTracker;
             _console = console;
             _torpedoController = torpedoController;
+            _chargeController = chargeController;
         }
 
         public void Start()
@@ -280,10 +266,20 @@ namespace OceanOfCode
             _enemyTracker.Next(moveProps);
             
             var next = _navigator.Next(moveProps.MyPosition);
+            if (next != null && moveProps.SilenceCooldown == 0)
+            {
+                Silence(next);
+                next = _navigator.Next(next.Position);
+            }
             
             if (_torpedoController.TryFireTorpedo(moveProps, next?.Position ?? moveProps.MyPosition, out var torpedoTarget))
             {
                 Torpedo(torpedoTarget.Value);
+            }
+            
+            if (next != null && moveProps.MineCooldown == 0)
+            {
+                Mine(next.Direction);
             }
 
             if (next == null)
@@ -292,7 +288,8 @@ namespace OceanOfCode
             }
             else
             {
-                Move(next.Direction);
+                Move(next.Direction, moveProps);
+                
             }
 
             ExecuteActions();
@@ -304,9 +301,9 @@ namespace OceanOfCode
             _actions.Add($"{x} {y}");
         }
 
-        private void Move(char direction)
+        private void Move(char direction, MoveProps moveProps)
         {
-            _actions.Add($"MOVE {direction} TORPEDO");
+            _actions.Add($"MOVE {direction} {_chargeController.NextPowerToCharge(moveProps)}");
         }
 
         private void Torpedo((int, int) coordinate)
@@ -315,10 +312,20 @@ namespace OceanOfCode
             _actions.Add($"TORPEDO {x} {y}");
         }
 
+        private void Silence(NavigationResult next)
+        {
+            _actions.Add($"SILENCE {next.Direction} 1");
+        }
+
         private void Surface()
         {
             Reset();
             _actions.Add("SURFACE");
+        }
+        
+        private void Mine(in char direction)
+        {
+            _actions.Add($"MINE {direction}");
         }
 
         private void Reset()
@@ -333,6 +340,67 @@ namespace OceanOfCode
             _console.Debug($"Send Actions: {actions}");
             _console.WriteLine(actions); 
             _actions.Clear();
+        }
+    }
+
+    public class ChargeController
+    {
+        private readonly EnemyTracker _enemyTracker;
+        private int _moveCounter;
+        List<(int, string)> _charges = new  List<(int, string)>();
+
+        public ChargeController(EnemyTracker enemyTracker)
+        {
+            _enemyTracker = enemyTracker;
+        }
+
+        class Charge
+        {
+            public static string Torpedo = "TORPEDO";
+            public static string Silence = "SILENCE";
+            public static string Mine = "MINE";
+            public static string Sonar = "SONAR";
+            
+        }
+        public string NextPowerToCharge(MoveProps move)
+        {
+            _moveCounter++;
+            string chosenCharge;
+            
+            if (move.TorpedoCooldown > 0 && _moveCounter <= 3)
+            {
+                chosenCharge = Charge.Torpedo;
+            }else if (_enemyTracker.DoWeHaveExactEnemyLocation())
+            {
+                if (move.TorpedoCooldown > 0)
+                {
+                    chosenCharge = Charge.Torpedo;
+                }else if (move.SilenceCooldown > 0 && _charges.Take(6).Select(x => x.Item2).Any(c => !c.Equals(Charge.Silence)))
+                {
+                    chosenCharge = Charge.Silence;
+                }else if (move.MineCooldown > 0)
+                {
+                    chosenCharge = Charge.Mine;
+                }
+                else
+                {
+                    chosenCharge = Charge.Silence;
+                }
+
+            }else if (move.SilenceCooldown > 0 && _charges.Take(6).Select(x => x.Item2).Any(c => !c.Equals(Charge.Silence)))
+            {
+                chosenCharge = Charge.Silence;
+            }else if (move.MineCooldown > 0)
+            {
+                chosenCharge = Charge.Mine;
+            }
+            else
+            {
+                chosenCharge = Charge.Torpedo;
+            }
+
+            _charges.Add((_moveCounter, chosenCharge));
+            return chosenCharge;
         }
     }
 
@@ -390,7 +458,9 @@ namespace OceanOfCode
             var headPositionReducer = new HeadPositionReducer(_gameProps, _mapScanner);
             _enemyTracker = new EnemyTracker(_gameProps, _mapScanner.GetMapOrScan(), console, headPositionReducer);
             var torpedoController = new TorpedoController(_gameProps, _enemyTracker, _mapScanner, _console);
-            _submarine = new Submarine(_moveStrategy, _enemyTracker, _console, torpedoController);
+            
+            var chargeController = new ChargeController(_enemyTracker);
+            _submarine = new Submarine(_moveStrategy, _enemyTracker, _console, torpedoController, chargeController);
             _submarine.Start();
         }
         
@@ -418,7 +488,11 @@ namespace OceanOfCode
                 {
                     MyPosition = (x, y), 
                     TorpedoCooldown = torpedoCooldown,
-                    OpponentOrders = opponentOrders
+                    OpponentOrders = opponentOrders,
+                    MyLife = myLife,
+                    OpponentLife = oppLife,
+                    SilenceCooldown = silenceCooldown,
+                    MineCooldown = mineCooldown
                 };
                 _console.Debug(moveProps);
                 _submarine.Next(moveProps);
