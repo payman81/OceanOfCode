@@ -60,14 +60,14 @@ namespace OceanOfCode.Tests
             [Test]
             public void FetchPossibleMatches()
             {
-                _sut.OnMove(Direction.North);
-                _sut.OnMove(Direction.East);
-                _sut.OnMove(Direction.East);
-                _sut.OnMove(Direction.South);
-                _sut.OnMove(Direction.South);
-                _sut.OnMove(Direction.East);
+                _sut.Next(new MoveProps{OpponentOrders = "MOVE N"});
+                _sut.Next(new MoveProps{OpponentOrders = "MOVE E"});
+                _sut.Next(new MoveProps{OpponentOrders = "MOVE E"});
+                _sut.Next(new MoveProps{OpponentOrders = "MOVE S"});
+                _sut.Next(new MoveProps{OpponentOrders = "MOVE S"});
+                _sut.Next(new MoveProps{OpponentOrders = "MOVE E"});
                 
-                var possibleMatches = _sut.PossibleTracks().ToList();
+                var possibleMatches = _sut.PossibleEnemyTracks().ToList();
 
                 Console.WriteLine($"Total number of matches: {possibleMatches.Count}");
                 foreach (var possibleMatch in possibleMatches)

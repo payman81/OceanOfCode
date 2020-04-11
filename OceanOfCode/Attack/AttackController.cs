@@ -10,6 +10,7 @@ namespace OceanOfCode.Attack
         private readonly IEnemyTracker _enemyTracker;
         private readonly IConsole _console;
         private int[,] _map;
+        private List<BinaryTrack> _possibleEnemyTracks;
 
         public AttackController(GameProps gameProps, IEnemyTracker enemyTracker, MapScanner mapScanner,
             IConsole console)
@@ -26,11 +27,12 @@ namespace OceanOfCode.Attack
             if (moveProps.TorpedoCooldown != 0)
             {
                 _console.Debug("Torpedo not charged. Skipped.");
-                var positionsDebug = _enemyTracker.PossibleEnemyPositions().ToList();
+                var positionsDebug = _enemyTracker.PossibleEnemyPositions();
                 Log(positionsDebug);
                 return false;
             }
-            var positions = _enemyTracker.PossibleEnemyPositions().ToList();
+
+            var positions = _enemyTracker.PossibleEnemyPositions();
             if (positions.Count > 1)
             {
                 string debugMessage = "Torpedo skipped. Too many candidates. ";

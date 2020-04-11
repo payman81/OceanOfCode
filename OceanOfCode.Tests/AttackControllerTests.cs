@@ -1,3 +1,4 @@
+using System.Linq;
 using Moq;
 using NUnit.Framework;
 using OceanOfCode.Attack;
@@ -68,7 +69,7 @@ namespace OceanOfCode.Tests
                 var enemyTracker = new Mock<IEnemyTracker>();
                 AttackController sut = new AttackController(_gameProps, enemyTracker.Object, _mapScanner, _console);
 
-                enemyTracker.Setup(x => x.PossibleEnemyPositions()).Returns(enemyPossibleLocations);
+                enemyTracker.Setup(x => x.PossibleEnemyPositions()).Returns(enemyPossibleLocations.ToList());
 
                 sut.TryFireTorpedo(new MoveProps {TorpedoCooldown = 0}, myPosition, out var target);
                 Assert.AreEqual((3, 1), target);
@@ -84,7 +85,7 @@ namespace OceanOfCode.Tests
                 var enemyTracker = new Mock<IEnemyTracker>();
                 AttackController sut = new AttackController(_gameProps, enemyTracker.Object, _mapScanner, _console);
 
-                enemyTracker.Setup(x => x.PossibleEnemyPositions()).Returns(enemyPossibleLocations);
+                enemyTracker.Setup(x => x.PossibleEnemyPositions()).Returns(enemyPossibleLocations.ToList());
 
                 sut.TryFireTorpedo(new MoveProps {TorpedoCooldown = 0}, myPosition, out var target);
                 Assert.AreEqual((4, 0), target);
@@ -99,7 +100,7 @@ namespace OceanOfCode.Tests
                 var enemyTracker = new Mock<IEnemyTracker>();
                 AttackController sut = new AttackController(_gameProps, enemyTracker.Object, _mapScanner, _console);
 
-                enemyTracker.Setup(x => x.PossibleEnemyPositions()).Returns(enemyPossibleLocations);
+                enemyTracker.Setup(x => x.PossibleEnemyPositions()).Returns(enemyPossibleLocations.ToList());
 
                 sut.TryFireTorpedo(new MoveProps {TorpedoCooldown = 0}, myPosition, out var target);
                 Assert.IsNull(target);

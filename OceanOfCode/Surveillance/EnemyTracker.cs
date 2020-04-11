@@ -7,7 +7,8 @@ namespace OceanOfCode.Surveillance
 {
     public interface IEnemyTracker
     {
-        IEnumerable<(int, int)> PossibleEnemyPositions();
+        List<(int, int)> PossibleEnemyPositions();
+        List<BinaryTrack> PossibleEnemyTracks();
         void Next(MoveProps moveProps);
         string Debug();
     }
@@ -24,6 +25,7 @@ namespace OceanOfCode.Surveillance
         Regex _surfaceRegex = new Regex("^SURFACE (.?)");
         Regex _torpedoRegex = new Regex("^TORPEDO ([0-9]{1,2}) ([0-9]{1,2})");
 
+        private List<BinaryTrack> _possibleEnemyTracks = new List<BinaryTrack>();
         private BinaryTrack _currentTrack;
         private BinaryTrack _exactEnemyTrack;
         private char _lastMoveDirection = Direction.None;
@@ -49,31 +51,14 @@ namespace OceanOfCode.Surveillance
             _currentTrack = BinaryTrack.StartEmptyTrack(gameProps);
         }
 
-        public IEnumerable<BinaryTrack> PossibleTracks(BinaryTrack currentPossibleTrack)
+        public List<BinaryTrack> PossibleEnemyTracks()
         {
-            BinaryTrack nextPossibleTrack = currentPossibleTrack;
-            do
-            {
-                currentPossibleTrack = nextPossibleTrack;
-                do
-                {
-                    if (!nextPossibleTrack.HasCollisionWith(_binaryMap))
-                    {
-                        yield return nextPossibleTrack;
-                    }
-                } while (nextPossibleTrack.TryShiftEast(out nextPossibleTrack));
-
-                nextPossibleTrack = currentPossibleTrack;
-            } while (nextPossibleTrack.TryShiftSouth(out nextPossibleTrack));
+            return _possibleEnemyTracks;
         }
 
-        public IEnumerable<BinaryTrack> PossibleTracks()
+        public List<BinaryTrack> PossibleTracksWithHeadFilter(BinaryTrack currentTrack, BinaryTrack headFilter)
         {
-            return PossibleTracksWithHeadFilter(_currentTrack, _headPositionReducer.HeadFilter);
-        }
-
-        public IEnumerable<BinaryTrack> PossibleTracksWithHeadFilter(BinaryTrack currentTrack, BinaryTrack headFilter)
-        {
+            List<BinaryTrack> possibleTracks = new List<BinaryTrack>();
             BinaryTrack currentPossibleTrack = BinaryTrack.FromAnotherBinaryTrack(currentTrack);
             BinaryTrack nextPossibleTrack = currentPossibleTrack;
             do
@@ -85,7 +70,7 @@ namespace OceanOfCode.Surveillance
                     {
                         if (!nextPossibleTrack.HasHeadCollisionWith(headFilter))
                         {
-                            yield return nextPossibleTrack;
+                            possibleTracks.Add(nextPossibleTrack);
                         }
                         
                     }
@@ -93,20 +78,13 @@ namespace OceanOfCode.Surveillance
 
                 nextPossibleTrack = currentPossibleTrack;
             } while (nextPossibleTrack.TryShiftSouth(out nextPossibleTrack));
+
+            return possibleTracks;
         }
         
-        public IEnumerable<(int, int)> PossibleEnemyPositions()
+        public List<(int, int)> PossibleEnemyPositions()
         {
-            if (_exactEnemyTrack != null)
-            {
-                return new List<(int, int)>{_exactEnemyTrack.Head.Value};
-            }
-            var possibleTracks = PossibleTracks().ToList();
-            if (possibleTracks.Count == 1)
-            {
-                _exactEnemyTrack = possibleTracks.Single();
-            }
-            return possibleTracks.Where(x => x.Head.HasValue).Select(x => x.Head.Value);
+            return PossibleEnemyTracks().Where(x => x.Head.HasValue).Select(x => x.Head.Value).ToList();
         }
 
         public void OnMove(char direction)
@@ -164,9 +142,9 @@ namespace OceanOfCode.Surveillance
         public void Next(MoveProps moveProps)
         {
             var orders = moveProps.OpponentOrders.Split('|');
-            SurfaceDetected surfaceDetected = null;
-            TorpedoDetected torpedoDetected = null;
-            bool silenceDetected = false;
+            SurfaceDetected surfaceDetected;
+            TorpedoDetected torpedoDetected;
+            bool silenceDetected;
             
             foreach (var order in orders)
             {
@@ -206,6 +184,7 @@ namespace OceanOfCode.Surveillance
                     }
                 }
             }
+            GeneratePossibleEnemyTracks();
         }
 
         private void OnTorpedo(TorpedoDetected torpedoDetected)
@@ -233,6 +212,17 @@ namespace OceanOfCode.Surveillance
         public bool DoWeHaveExactEnemyLocation()
         {
             return _exactEnemyTrack != null;
+        }
+
+        private void GeneratePossibleEnemyTracks()
+        {
+            var possibleTracks = PossibleTracksWithHeadFilter(_currentTrack, _headPositionReducer.HeadFilter).ToList();
+            if (possibleTracks.Count == 1)
+            {
+                _exactEnemyTrack = possibleTracks.Single();
+            }
+
+            _possibleEnemyTracks = possibleTracks;
         }
     }
 
