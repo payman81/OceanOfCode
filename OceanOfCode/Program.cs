@@ -185,18 +185,19 @@ namespace OceanOfCode
                 Silence(next);
                 next = _navigator.Next(next.Position);
             }
+            _attackController.Next(moveProps, next);
             
-            if (_attackController.TryFireTorpedo(moveProps, next?.Position ?? moveProps.MyPosition, out var torpedoTarget))
+            if (_attackController.TryFireTorpedo(out var torpedoTarget))
             {
                 Torpedo(torpedoTarget.Value);
             }
             
-            if(_attackController.TryDropMine(moveProps, next, out var dropMineDirection))
+            if(_attackController.TryDropMine(out var dropMineDirection))
             {
                 DropMine(dropMineDirection);
             }
 
-            if (_attackController.TryTriggerMine(out (int, int) position))
+            if (_attackController.TryTriggerMine(out var position))
             {
                 TriggerMine(position);
             }

@@ -55,7 +55,6 @@ namespace OceanOfCode.Tests
             [Test, Ignore("Must change range calculation to pass this test")]
             public void CalculateCorrectRange_MustNotReturnPositionsIfJumpedOverIslands()
             {
-
                 var positionsInRange = (8, 2).CalculateTorpedoRange(_gameProps, _mapScanner.GetMapOrScan());
                 CollectionAssert.DoesNotContain(positionsInRange, (5, 2));
             }
@@ -65,13 +64,13 @@ namespace OceanOfCode.Tests
             {
                 var myPosition = (0, 0);
                 var enemyPossibleLocations = new[] {(3, 1)};
-
                 var enemyTracker = new Mock<IEnemyTracker>();
                 AttackController sut = new AttackController(_gameProps, enemyTracker.Object, _mapScanner, _console);
-
                 enemyTracker.Setup(x => x.PossibleEnemyPositions()).Returns(enemyPossibleLocations.ToList());
-
-                sut.TryFireTorpedo(new MoveProps {TorpedoCooldown = 0}, myPosition, out var target);
+                sut.Next(new MoveProps {TorpedoCooldown = 0}, new NavigationResult{Position = myPosition});
+                
+                sut.TryFireTorpedo(out var target);
+                
                 Assert.AreEqual((3, 1), target);
             }
 
@@ -81,13 +80,13 @@ namespace OceanOfCode.Tests
             {
                 var myPosition = (0, 0);
                 var enemyPossibleLocations = new[] {(5, 0)};
-
                 var enemyTracker = new Mock<IEnemyTracker>();
                 AttackController sut = new AttackController(_gameProps, enemyTracker.Object, _mapScanner, _console);
-
                 enemyTracker.Setup(x => x.PossibleEnemyPositions()).Returns(enemyPossibleLocations.ToList());
-
-                sut.TryFireTorpedo(new MoveProps {TorpedoCooldown = 0}, myPosition, out var target);
+                sut.Next(new MoveProps {TorpedoCooldown = 0}, new NavigationResult{Position = myPosition});
+                
+                sut.TryFireTorpedo(out var target);
+                
                 Assert.AreEqual((4, 0), target);
             }
 
@@ -96,13 +95,13 @@ namespace OceanOfCode.Tests
             {
                 var myPosition = (0, 0);
                 var enemyPossibleLocations = new[] {(4, 0), (5, 0)};
-
                 var enemyTracker = new Mock<IEnemyTracker>();
                 AttackController sut = new AttackController(_gameProps, enemyTracker.Object, _mapScanner, _console);
-
                 enemyTracker.Setup(x => x.PossibleEnemyPositions()).Returns(enemyPossibleLocations.ToList());
-
-                sut.TryFireTorpedo(new MoveProps {TorpedoCooldown = 0}, myPosition, out var target);
+                sut.Next(new MoveProps {TorpedoCooldown = 0}, new NavigationResult{Position = myPosition});
+                
+                sut.TryFireTorpedo(out var target);
+                
                 Assert.IsNull(target);
             }
         }
