@@ -31,6 +31,18 @@ namespace OceanOfCode.Attack
             _headPositionReducer = headPositionReducer;
             _map = mapScanner.GetMapOrScan();
         }
+        
+        //Debug only
+        public AttackController(GameProps gameProps, IEnemyTracker enemyTracker, BinaryTrack mapTrack,  Dictionary<(int,int), BinaryTrack> mineMaps,
+            IConsole console, HeadPositionReducer headPositionReducer)
+        {
+            _gameProps = gameProps;
+            _enemyTracker = enemyTracker;
+            _console = console;
+            _headPositionReducer = headPositionReducer;
+            _map = mapTrack.ToCartesian();
+            _mineMaps = mineMaps;
+        }
 
         public void Next(MoveProps moveProps, NavigationResult next)
         {
@@ -39,14 +51,17 @@ namespace OceanOfCode.Attack
             _torpedoTarget = CalculateTorpedoTarget(moveProps, next ?? _lastNavigationResult);
             _mineDirection = CalculateMineDirection(moveProps, next ?? _lastNavigationResult);
             
-            
             _triggerTarget = CalculateTriggerTarget(moveProps, next ?? _lastNavigationResult);
             if (_triggerTarget.HasValue)
             {
                 _mineMaps.Remove(_triggerTarget.Value);
-                _headPositionReducer.Handle(new MineTriggered{Position = _triggerTarget.Value});
-                
             }
+            
+            _headPositionReducer.Handle(new EnemyAttacked
+            {
+                TriggeredMinePosition = _triggerTarget,
+                TorpedoTargetPosition = _torpedoTarget
+            });
             
             if (next != null)
             {
@@ -131,7 +146,9 @@ namespace OceanOfCode.Attack
             var dropMineDirection = shouldDropMine ? next.Direction : Direction.None;
             if (shouldDropMine)
             {
-                _mineMaps.Add(next.Position, BinaryTrack.FromAllZeroExcept(_gameProps, next.Position.FindNeighbouringCells(_gameProps), null));
+                var mineArea = next.Position.FindNeighbouringCells(_gameProps);
+                mineArea.Add(next.Position);
+                _mineMaps.Add(next.Position, BinaryTrack.FromAllZeroExcept(_gameProps, mineArea, null));
             }
             return dropMineDirection;
         }
@@ -148,13 +165,16 @@ namespace OceanOfCode.Attack
             }
             
             //Find any guaranteed aim
-            var guaranteedAttackMine = collisionResults.Where(x => x.Item1.NotCollidingCount == 0).ToList();
+            var guaranteedAttackMine = collisionResults
+                .Where(x => x.Item1.CollidingCount > 0)
+                .Where(x => x.Item1.NotCollidingCount == 0).ToList();
             if (guaranteedAttackMine.Any())
             {
                 _console.Debug($"Trigger guaranteed mine at {guaranteedAttackMine.First().Item2}");
                 return guaranteedAttackMine.First().Item2;
             }
 
+            //Couldn't find guaranteed mine. Now try to find one that will reduce the possible head positions
             var mineWithHighestChanceOfLimitingHeadPositions =
                 collisionResults.OrderByDescending(x => x.Item1.CollidingCount).Where(x => x.Item1.CollidingCount > 0).ToList();
             if(mineWithHighestChanceOfLimitingHeadPositions.Any())

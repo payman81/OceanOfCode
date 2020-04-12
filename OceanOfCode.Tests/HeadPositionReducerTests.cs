@@ -241,5 +241,129 @@ namespace OceanOfCode.Tests
             
         }
 
+        public class ReducingPossibleHeadsAfterAttack
+        {
+            private ConsoleMock _console;
+            private GameProps _gameProps;
+            private MapScanner _mapScanner;
+            private HeadPositionReducer _sut;
+
+            [SetUp]
+            public void Setup()
+            {
+                _console = new ConsoleMock();
+                _gameProps = new GameProps {Width = 15, Height = 15, MyId = 0};
+
+                _console.Record(".............xx");
+                _console.Record(".............xx");
+                _console.Record("......xx.......");
+                _console.Record("......xx.......");
+                _console.Record("...............");
+                _console.Record("...............");
+                _console.Record("...............");
+                _console.Record("...............");
+                _console.Record("...............");
+                _console.Record("...............");
+                _console.Record("...............");
+                _console.Record("...............");
+                _console.Record("...............");
+                _console.Record("...............");
+                _console.Record("...............");
+            
+                _mapScanner = new MapScanner(_gameProps, _console);
+                _sut = new HeadPositionReducer(_gameProps, _mapScanner);
+            }
+            
+            [Test]
+            public void ReducingPossibleHeads_OnlyMineWasTriggered_EnemyLostOneLife()
+            {
+                _sut.Handle(new TorpedoDetected{Target = (7,4)});
+                _sut.Handle(new EnemyAttacked{TorpedoTargetPosition = null, TriggeredMinePosition = (12, 4)});
+                _sut.Handle(new EnemyLifeChanged{PreviousLife = 6, CurrentLife = 5});
+                Console.WriteLine(_sut.HeadFilter);
+
+                string[] expected =
+                {
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxx.xxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx"
+                }; 
+            
+                MapAssert.MatchesShape(_gameProps, _sut.HeadFilter, expected) ;
+            }
+            
+            [Test]
+            public void ReducingPossibleHeads_OnlyMineWasTriggered_EnemyLostTwoLives()
+            {
+                _sut.Handle(new TorpedoDetected{Target = (7,4)});
+                _sut.Handle(new EnemyAttacked{TorpedoTargetPosition = null, TriggeredMinePosition = (11, 4)});
+                _sut.Handle(new EnemyLifeChanged{PreviousLife = 6, CurrentLife = 4});
+                Console.WriteLine(_sut.HeadFilter);
+
+                string[] expected =
+                {
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxx.xxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx"
+                }; 
+            
+                MapAssert.MatchesShape(_gameProps, _sut.HeadFilter, expected) ;
+            }
+            
+            [Test]
+            public void ReducingPossibleHeads_BothMineAndTorpedoWereTriggered_EnemyLostTwoLives()
+            {
+                _sut.Handle(new TorpedoDetected{Target = (7,4)});
+                _sut.Handle(new EnemyAttacked{TorpedoTargetPosition = (11,5), TriggeredMinePosition = (11, 4)});
+                _sut.Handle(new EnemyLifeChanged{PreviousLife = 6, CurrentLife = 4});
+                Console.WriteLine(_sut.HeadFilter);
+
+                string[] expected =
+                {
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxx.xxxx",
+                    "xxxxxxxxxx..xxx",
+                    "xxxxxxxxxx.xxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx",
+                    "xxxxxxxxxxxxxxx"
+                }; 
+            
+                MapAssert.MatchesShape(_gameProps, _sut.HeadFilter, expected) ;
+            }
+        }
+
     }
 }

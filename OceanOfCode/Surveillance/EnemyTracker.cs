@@ -1,7 +1,8 @@
+using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
+// ReSharper disable ConvertNullableToShortForm
 
 namespace OceanOfCode.Surveillance
 {
@@ -28,10 +29,12 @@ namespace OceanOfCode.Surveillance
         private List<BinaryTrack> _possibleEnemyTracks = new List<BinaryTrack>();
         private BinaryTrack _currentTrack;
         private BinaryTrack _exactEnemyTrack;
-        private char _lastMoveDirection = Direction.None;
+        private char _lastMoveMoveDirection = Direction.None;
+        private int _lastEnemyLife = 6;
 
 
-        private EnemyTracker(GameProps gameProps, BinaryTrack binaryMap, BinaryTrack currentTrack, BinaryTrack exactTrack, IConsole console, HeadPositionReducer headPositionReducer)
+        private EnemyTracker(GameProps gameProps, BinaryTrack binaryMap, BinaryTrack currentTrack,
+            BinaryTrack exactTrack, IConsole console, HeadPositionReducer headPositionReducer, char lastMoveDirection)
         {
             _console = console;
             _headPositionReducer = headPositionReducer;
@@ -39,6 +42,7 @@ namespace OceanOfCode.Surveillance
             _binaryMap = binaryMap;
             _currentTrack = currentTrack;
             _exactEnemyTrack = exactTrack;
+            _lastMoveMoveDirection = lastMoveDirection;
             binaryMap.ToCartesian();
         }
         public EnemyTracker(GameProps gameProps, int[,] map, IConsole console, HeadPositionReducer headPositionReducer)
@@ -89,7 +93,7 @@ namespace OceanOfCode.Surveillance
 
         public void OnMove(char direction)
         {
-            _lastMoveDirection = direction;
+            _lastMoveMoveDirection = direction;
             switch (direction)
             {
                 case Direction.East:
@@ -118,7 +122,7 @@ namespace OceanOfCode.Surveillance
             
             _currentTrack = BinaryTrack.StartEmptyTrack(_gameProps);
             _exactEnemyTrack = null;
-            _headPositionReducer.Handle(new SilenceDetected{LastMoveDirection = _lastMoveDirection});
+            _headPositionReducer.Handle(new SilenceDetected{LastMoveDirection = _lastMoveMoveDirection});
         }
         
         private void OnSurface(SurfaceDetected surfaceDetected)
@@ -141,6 +145,11 @@ namespace OceanOfCode.Surveillance
 
         public void Next(MoveProps moveProps)
         {
+            if (moveProps.OpponentLife != _lastEnemyLife)
+            {
+                _headPositionReducer.Handle(new EnemyLifeChanged{PreviousLife = _lastEnemyLife, CurrentLife = moveProps.OpponentLife, EnemyOrder = moveProps.OpponentOrders});
+                _lastEnemyLife = moveProps.OpponentLife;
+            }
             var orders = moveProps.OpponentOrders.Split('|');
             SurfaceDetected surfaceDetected;
             TorpedoDetected torpedoDetected;
@@ -201,12 +210,15 @@ namespace OceanOfCode.Surveillance
                 debug = debug + $"exactTrack:{_exactEnemyTrack.Debug()}";
             }
 
+            debug = debug + $"HEadFilter:{_headPositionReducer.HeadFilter.Debug()}";
+            debug = debug + $"lastMoveDirection: {_lastMoveMoveDirection}";
+
             return debug;
         }
 
-        public static EnemyTracker FromDebug(GameProps gameProps, BinaryTrack binaryMap, BinaryTrack currentTrack, BinaryTrack exactTrack, IConsole console, HeadPositionReducer headPositionReducer)
+        public static EnemyTracker FromDebug(GameProps gameProps, BinaryTrack binaryMap, BinaryTrack currentTrack, BinaryTrack exactTrack, IConsole console, HeadPositionReducer headPositionReducer, char lastDirection)
         {
-            return new EnemyTracker(gameProps, binaryMap, currentTrack, exactTrack, console, headPositionReducer);
+            return new EnemyTracker(gameProps, binaryMap, currentTrack, exactTrack, console, headPositionReducer, lastDirection);
         }
 
         public bool DoWeHaveExactEnemyLocation()
@@ -226,9 +238,10 @@ namespace OceanOfCode.Surveillance
         }
     }
 
-    public class MineTriggered
+    public class EnemyAttacked
     {
-        public (int,int) Position { get; set; }
+        public (int, int)? TriggeredMinePosition { get; set; }
+        public (int, int)? TorpedoTargetPosition { get; set; }
     }
     public class TorpedoDetected
     {
@@ -250,12 +263,26 @@ namespace OceanOfCode.Surveillance
         public char LastMoveDirection { get; set; }
     }
 
+    public class EnemyLifeChanged
+    {
+        public int PreviousLife { get; set; }
+        public int CurrentLife { get; set; }
+        public string EnemyOrder { get; set; }
+
+        public bool HasSurfaced()
+        {
+            return EnemyOrder?.Contains("SURFACE") ?? false;
+        }
+    }
+
     public class HeadPositionReducer
     {
         private readonly GameProps _gameProps;
         private BinaryTrack _filter;
         private BinaryTrack _mapFilter;
-        private int[,] _map; 
+        private int[,] _map;
+        private Nullable<(int, int)> _lastTriggeredMinePosition = null;
+        private Nullable<(int, int)> _lastTorpedoPosition = null;
 
         public BinaryTrack HeadFilter => _filter;
         public HeadPositionReducer(GameProps gameProps, MapScanner mapScanner)
@@ -275,6 +302,14 @@ namespace OceanOfCode.Surveillance
             _mapFilter = BinaryTrack.FromCartesian(gameProps, _map);
             Reset();
         }
+        public HeadPositionReducer(GameProps gameProps, int[,] map, BinaryTrack initialFilterTrack)
+        {
+            _map = map;
+            _gameProps = gameProps;
+            _mapFilter = BinaryTrack.FromCartesian(gameProps, _map);
+            _filter = initialFilterTrack;
+        }
+        
         public void Handle(TorpedoDetected torpedoDetected)
         {
             var inRangePositions = torpedoDetected.Target.CalculateTorpedoRange(_gameProps, _map);
@@ -301,9 +336,7 @@ namespace OceanOfCode.Surveillance
                     break;
             }
         }
-
-       
-
+        
         private BinaryTrack ShiftFilterEast()
         {
             return _filter
@@ -373,7 +406,6 @@ namespace OceanOfCode.Surveillance
             _filter = BinaryTrack.FromEmpty(_gameProps);
 
         }
-
         public void Handle(SurfaceDetected surfaceDetected)
         {
             _filter = _filter
@@ -382,9 +414,52 @@ namespace OceanOfCode.Surveillance
             
         }
 
-        public void Handle(MineTriggered mineTriggered)
+        public void Handle(EnemyAttacked enemyAttacked)
         {
-           //todo: reduce head positions by watching enemy's life
+            _lastTriggeredMinePosition = enemyAttacked.TriggeredMinePosition;
+            _lastTorpedoPosition = enemyAttacked.TorpedoTargetPosition;
+        }
+        public void Handle(EnemyLifeChanged enemyLifeChanged)
+        {
+            var lifeLost = enemyLifeChanged.PreviousLife - enemyLifeChanged.CurrentLife ;
+            var lifeLostExceptSurface = enemyLifeChanged.HasSurfaced() ? lifeLost - 1 : lifeLost;
+            bool bothTorpedoAndMineWereTriggered = _lastTorpedoPosition != null && _lastTriggeredMinePosition != null;
+            if (lifeLostExceptSurface > 1 && !bothTorpedoAndMineWereTriggered)
+            {
+                //either torpedo or mine have exactly hit the enemy
+                var lastHitPositions = new List<(int,int)>();
+                if (_lastTorpedoPosition.HasValue)
+                {
+                    lastHitPositions.Add(_lastTorpedoPosition.Value);
+                }
+
+                if (_lastTriggeredMinePosition.HasValue)
+                {
+                    lastHitPositions.Add(_lastTriggeredMinePosition.Value);
+                }
+
+                _filter = _filter.BinaryOr(BinaryTrack.FromAllOneExcept(_gameProps, lastHitPositions));
+            }
+
+            if (lifeLostExceptSurface == 1 || bothTorpedoAndMineWereTriggered)
+            {
+                var newArea = BinaryTrack.FromAllOneExcept(_gameProps, new List<(int, int)>());
+                if (_lastTorpedoPosition.HasValue)
+                {
+                    newArea = newArea.BinaryAnd(BinaryTrack.FromAllOneExcept(_gameProps,
+                        _lastTorpedoPosition.Value.FindNeighbouringCells(_gameProps)));
+                }
+
+                if (_lastTriggeredMinePosition.HasValue)
+                {
+                    newArea = newArea.BinaryAnd((BinaryTrack.FromAllOneExcept(_gameProps,
+                        _lastTriggeredMinePosition.Value.FindNeighbouringCells(_gameProps))));
+                }
+
+                _filter = _filter
+                    .BinaryOr(newArea)
+                    .BinaryOr(_mapFilter);
+            }
         }
     }
 }
