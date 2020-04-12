@@ -13,18 +13,21 @@ namespace OceanOfCode.Tests
             private ConsoleMock _console;
             private GameProps _gameProps;
             private MapScanner _mapScanner;
-            
+            private HeadPositionReducer _headPositionReducer;
+
             [SetUp]
             public void Setup()
             {
                 _console = new ConsoleMock();
                 _gameProps = new GameProps {Width = 15, Height = 4, MyId = 0};
+                
 
                 _console.Record(".............xx");
                 _console.Record(".............xx");
                 _console.Record("......xx.......");
                 _console.Record("......xx.......");
                 _mapScanner = new MapScanner(_gameProps, _console);
+                _headPositionReducer = new HeadPositionReducer(_gameProps, _mapScanner);
             }
 
             [Test]
@@ -65,7 +68,7 @@ namespace OceanOfCode.Tests
                 var myPosition = (0, 0);
                 var enemyPossibleLocations = new[] {(3, 1)};
                 var enemyTracker = new Mock<IEnemyTracker>();
-                AttackController sut = new AttackController(_gameProps, enemyTracker.Object, _mapScanner, _console);
+                AttackController sut = new AttackController(_gameProps, enemyTracker.Object, _mapScanner, _console, _headPositionReducer);
                 enemyTracker.Setup(x => x.PossibleEnemyPositions()).Returns(enemyPossibleLocations.ToList());
                 sut.Next(new MoveProps {TorpedoCooldown = 0}, new NavigationResult{Position = myPosition});
                 
@@ -81,7 +84,7 @@ namespace OceanOfCode.Tests
                 var myPosition = (0, 0);
                 var enemyPossibleLocations = new[] {(5, 0)};
                 var enemyTracker = new Mock<IEnemyTracker>();
-                AttackController sut = new AttackController(_gameProps, enemyTracker.Object, _mapScanner, _console);
+                AttackController sut = new AttackController(_gameProps, enemyTracker.Object, _mapScanner, _console, _headPositionReducer);
                 enemyTracker.Setup(x => x.PossibleEnemyPositions()).Returns(enemyPossibleLocations.ToList());
                 sut.Next(new MoveProps {TorpedoCooldown = 0}, new NavigationResult{Position = myPosition});
                 
@@ -96,7 +99,7 @@ namespace OceanOfCode.Tests
                 var myPosition = (0, 0);
                 var enemyPossibleLocations = new[] {(4, 0), (5, 0)};
                 var enemyTracker = new Mock<IEnemyTracker>();
-                AttackController sut = new AttackController(_gameProps, enemyTracker.Object, _mapScanner, _console);
+                AttackController sut = new AttackController(_gameProps, enemyTracker.Object, _mapScanner, _console, _headPositionReducer);
                 enemyTracker.Setup(x => x.PossibleEnemyPositions()).Returns(enemyPossibleLocations.ToList());
                 sut.Next(new MoveProps {TorpedoCooldown = 0}, new NavigationResult{Position = myPosition});
                 

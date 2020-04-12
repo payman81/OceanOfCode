@@ -226,6 +226,10 @@ namespace OceanOfCode.Surveillance
         }
     }
 
+    public class MineTriggered
+    {
+        public (int,int) Position { get; set; }
+    }
     public class TorpedoDetected
     {
         public (int,int) Target { get; set; }
@@ -376,6 +380,11 @@ namespace OceanOfCode.Surveillance
                 .BinaryOr(BinaryTrack.FromSector(surfaceDetected.Sector))
                 .BinaryOr(_mapFilter);
             
+        }
+
+        public void Handle(MineTriggered mineTriggered)
+        {
+           //todo: reduce head positions by watching enemy's life
         }
     }
 }

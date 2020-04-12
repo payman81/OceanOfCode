@@ -199,7 +199,7 @@ namespace OceanOfCode
 
             if (_attackController.TryTriggerMine(out var position))
             {
-                TriggerMine(position);
+                TriggerMine(position.Value);
             }
 
             if (next == null)
@@ -383,7 +383,7 @@ namespace OceanOfCode
             _moveStrategy = new PreComputedSpiralNavigator(_mapScanner, _console, reversedModeOn:true, _gameProps);
             var headPositionReducer = new HeadPositionReducer(_gameProps, _mapScanner);
             _enemyTracker = new EnemyTracker(_gameProps, _mapScanner.GetMapOrScan(), console, headPositionReducer);
-            var torpedoController = new AttackController(_gameProps, _enemyTracker, _mapScanner, _console);
+            var torpedoController = new AttackController(_gameProps, _enemyTracker, _mapScanner, _console, headPositionReducer);
             
             var chargeController = new ChargeController(_enemyTracker);
             _submarine = new Submarine(_moveStrategy, _enemyTracker, _console, torpedoController, chargeController);

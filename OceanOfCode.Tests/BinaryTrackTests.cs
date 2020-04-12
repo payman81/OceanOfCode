@@ -485,6 +485,28 @@ namespace OceanOfCode.Tests
 
                 MapAssert.MatchesShape(_gameProps, result, expected);
             }
+
+            [Test]
+            public void CalculateCollision_AllColliding()
+            {
+                var map = BinaryTrack.FromAllZeroExcept(_gameProps, new List<(int, int)> {(1,0), (2,0), (1,1)});
+                var target = BinaryTrack.FromAllZeroExcept(_gameProps, new List<(int, int)> {(1,0), (2,0), (1,1), (2,1)});
+
+                var result = map.CalculateCollision(target);
+                Assert.AreEqual(3, result.CollidingCount);
+                Assert.AreEqual(0, result.NotCollidingCount);
+            }
+            
+            [Test]
+            public void CalculateCollision_SomeColliding()
+            {
+                var map = BinaryTrack.FromAllZeroExcept(_gameProps, new List<(int, int)> {(1,0), (2,0), (1,1)});
+                var target = BinaryTrack.FromAllZeroExcept(_gameProps, new List<(int, int)> {(2,0), (3,0), (2,1), (3,1)});
+
+                var result = map.CalculateCollision(target);
+                Assert.AreEqual(1, result.CollidingCount);
+                Assert.AreEqual(2, result.NotCollidingCount);
+            }
         }
 
     }

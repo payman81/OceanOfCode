@@ -410,6 +410,11 @@ namespace OceanOfCode.Surveillance
             }
             return new BinaryTrack(gameProps, data, head);
         }
+        
+        public static BinaryTrack FromAllZeroExcept(GameProps gameProps, List<(int, int)> inRangePositions)
+        {
+            return FromAllZeroExcept(gameProps, inRangePositions, null);
+        }
 
         public static BinaryTrack FromSector(int sector)
         {
@@ -432,6 +437,16 @@ namespace OceanOfCode.Surveillance
             for (int j = 0; j < _binaryMap.Length; j++)
             {
                 data[j] = (short) (_binaryMap[j] & another._binaryMap[j]);
+            }
+            return new BinaryTrack(_gameProps, data, null);
+        }
+        
+        public BinaryTrack BinaryXor(BinaryTrack another)
+        {
+            var data = new short[_gameProps.Height];
+            for (int j = 0; j < _binaryMap.Length; j++)
+            {
+                data[j] = (short) (_binaryMap[j] ^ another._binaryMap[j]);
             }
             return new BinaryTrack(_gameProps, data, null);
         }
@@ -488,5 +503,29 @@ namespace OceanOfCode.Surveillance
             return sb.ToString();
         }
 
+        public CollisionResult CalculateCollision(BinaryTrack target)
+        {
+            var andResult = BinaryAnd(target);
+            return new CollisionResult{
+                CollidingCount = andResult.CountOnes(), 
+                NotCollidingCount = BinaryXor(target).BinaryAnd(this).CountOnes()};
+        }
+
+        private int CountOnes()
+        {
+            string ones = string.Empty;
+            foreach (var row in _binaryMap.Where(r => r != 0))
+            {
+                ones+= Convert.ToString(row, 2).Replace("0", string.Empty);
+            }
+
+            return ones.Length;
+        }
+    }
+
+    public class CollisionResult
+    {
+        public int CollidingCount { get; set; }
+        public int NotCollidingCount { get; set; }
     }
 }

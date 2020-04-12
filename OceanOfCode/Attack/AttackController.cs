@@ -10,22 +10,25 @@ namespace OceanOfCode.Attack
     {
         private readonly GameProps _gameProps;
         private readonly IEnemyTracker _enemyTracker;
+        private readonly HeadPositionReducer _headPositionReducer;
         private readonly IConsole _console;
         private int[,] _map;
 
         private BinaryTrack _possibleEnemyHeadsMap;
         private Dictionary<(int,int), BinaryTrack> _mineMaps = new Dictionary<(int, int), BinaryTrack>();
         private (int, int)? _torpedoTarget;
+        private (int, int)? _triggerTarget;
         private char _mineDirection;
         private NavigationResult _lastNavigationResult;
 
 
         public AttackController(GameProps gameProps, IEnemyTracker enemyTracker, MapScanner mapScanner,
-            IConsole console)
+            IConsole console, HeadPositionReducer headPositionReducer)
         {
             _gameProps = gameProps;
             _enemyTracker = enemyTracker;
             _console = console;
+            _headPositionReducer = headPositionReducer;
             _map = mapScanner.GetMapOrScan();
         }
 
@@ -35,16 +38,26 @@ namespace OceanOfCode.Attack
 
             _torpedoTarget = CalculateTorpedoTarget(moveProps, next ?? _lastNavigationResult);
             _mineDirection = CalculateMineDirection(moveProps, next ?? _lastNavigationResult);
+            
+            
+            _triggerTarget = CalculateTriggerTarget(moveProps, next ?? _lastNavigationResult);
+            if (_triggerTarget.HasValue)
+            {
+                _mineMaps.Remove(_triggerTarget.Value);
+                _headPositionReducer.Handle(new MineTriggered{Position = _triggerTarget.Value});
+                
+            }
+            
             if (next != null)
             {
                 _lastNavigationResult = next;
             }
         }
-        
+
         public bool TryFireTorpedo(out (int, int)? target)
         {
             target = _torpedoTarget;
-            return _torpedoTarget != null;
+            return _torpedoTarget.HasValue;
         }
 
         public bool TryDropMine(out char dropMineDirection)
@@ -53,10 +66,10 @@ namespace OceanOfCode.Attack
             return _mineDirection != Direction.None;
         }
 
-        public bool TryTriggerMine(out (int, int) valueTuple)
+        public bool TryTriggerMine(out (int, int)? target)
         {
-            valueTuple = (0, 0);
-            return false;
+            target = _triggerTarget;
+            return _triggerTarget.HasValue;
         }
 
         private (int,int)? CalculateTorpedoTarget(MoveProps moveProps, NavigationResult navigationResult)
@@ -121,6 +134,36 @@ namespace OceanOfCode.Attack
                 _mineMaps.Add(next.Position, BinaryTrack.FromAllZeroExcept(_gameProps, next.Position.FindNeighbouringCells(_gameProps), null));
             }
             return dropMineDirection;
+        }
+        private (int, int)? CalculateTriggerTarget(MoveProps moveProps, NavigationResult lastNavigationResult)
+        {
+            var collisionResults = new List<(CollisionResult, (int, int))>();
+            var myNeighbourCells = moveProps.MyPosition.FindNeighbouringCells(_gameProps);
+            myNeighbourCells.Add(moveProps.MyPosition);
+            
+            foreach (var mineMap in _mineMaps.Where(x => myNeighbourCells.All(n => !n.Equals(x.Key))))
+            {
+                var collisionResult = _possibleEnemyHeadsMap.CalculateCollision(mineMap.Value);
+                collisionResults.Add((collisionResult, mineMap.Key));
+            }
+            
+            //Find any guaranteed aim
+            var guaranteedAttackMine = collisionResults.Where(x => x.Item1.NotCollidingCount == 0).ToList();
+            if (guaranteedAttackMine.Any())
+            {
+                _console.Debug($"Trigger guaranteed mine at {guaranteedAttackMine.First().Item2}");
+                return guaranteedAttackMine.First().Item2;
+            }
+
+            var mineWithHighestChanceOfLimitingHeadPositions =
+                collisionResults.OrderByDescending(x => x.Item1.CollidingCount).Where(x => x.Item1.CollidingCount > 0).ToList();
+            if(mineWithHighestChanceOfLimitingHeadPositions.Any())
+            {
+                _console.Debug($"Trigger mine to reduce head positions by {mineWithHighestChanceOfLimitingHeadPositions.First().Item1.CollidingCount} at {mineWithHighestChanceOfLimitingHeadPositions.First().Item2}");
+                return mineWithHighestChanceOfLimitingHeadPositions.First().Item2;
+            }
+
+            return null;
         }
         private void Log(List<(int, int)> positions)
         {
