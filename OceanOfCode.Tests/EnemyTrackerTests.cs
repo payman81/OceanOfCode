@@ -15,6 +15,7 @@ namespace OceanOfCode.Tests
             private GameProps _gameProps;
             private EnemyTracker _sut;
             private HeadPositionReducer _headPositionReducer;
+            private int _defaultEnemyLife;
 
             [SetUp]
             public void Setup()
@@ -29,6 +30,7 @@ namespace OceanOfCode.Tests
                 var mapScanner = new MapScanner(_gameProps, _console);
                 _headPositionReducer = new HeadPositionReducer(_gameProps, mapScanner);
                 _sut = new EnemyTracker(_gameProps, mapScanner.GetMapOrScan(), _console, _headPositionReducer);
+                _defaultEnemyLife = 6;
             }
 
             [Test]
@@ -60,12 +62,12 @@ namespace OceanOfCode.Tests
             [Test]
             public void FetchPossibleMatches()
             {
-                _sut.Next(new MoveProps{OpponentOrders = "MOVE N"});
-                _sut.Next(new MoveProps{OpponentOrders = "MOVE E"});
-                _sut.Next(new MoveProps{OpponentOrders = "MOVE E"});
-                _sut.Next(new MoveProps{OpponentOrders = "MOVE S"});
-                _sut.Next(new MoveProps{OpponentOrders = "MOVE S"});
-                _sut.Next(new MoveProps{OpponentOrders = "MOVE E"});
+                _sut.Next(new MoveProps{OpponentOrders = "MOVE N", OpponentLife = _defaultEnemyLife});
+                _sut.Next(new MoveProps{OpponentOrders = "MOVE E", OpponentLife = _defaultEnemyLife});
+                _sut.Next(new MoveProps{OpponentOrders = "MOVE E", OpponentLife = _defaultEnemyLife});
+                _sut.Next(new MoveProps{OpponentOrders = "MOVE S", OpponentLife = _defaultEnemyLife});
+                _sut.Next(new MoveProps{OpponentOrders = "MOVE S", OpponentLife = _defaultEnemyLife});
+                _sut.Next(new MoveProps{OpponentOrders = "MOVE E", OpponentLife = _defaultEnemyLife});
                 
                 var possibleMatches = _sut.PossibleEnemyTracks().ToList();
 

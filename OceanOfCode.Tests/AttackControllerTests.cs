@@ -70,9 +70,10 @@ namespace OceanOfCode.Tests
                 var enemyTracker = new Mock<IEnemyTracker>();
                 AttackController sut = new AttackController(_gameProps, enemyTracker.Object, _mapScanner, _console, _headPositionReducer);
                 enemyTracker.Setup(x => x.PossibleEnemyPositions()).Returns(enemyPossibleLocations.ToList());
-                sut.Next(new MoveProps {TorpedoCooldown = 0}, new NavigationResult{Position = myPosition});
+                sut.NextStart();
                 
-                sut.TryFireTorpedo(out var target);
+                sut.TryFireTorpedo(new MoveProps {TorpedoCooldown = 0}, new NavigationResult{Position = myPosition}, out var target);
+                sut.NextEnd();
                 
                 Assert.AreEqual((3, 1), target);
             }
@@ -86,9 +87,11 @@ namespace OceanOfCode.Tests
                 var enemyTracker = new Mock<IEnemyTracker>();
                 AttackController sut = new AttackController(_gameProps, enemyTracker.Object, _mapScanner, _console, _headPositionReducer);
                 enemyTracker.Setup(x => x.PossibleEnemyPositions()).Returns(enemyPossibleLocations.ToList());
-                sut.Next(new MoveProps {TorpedoCooldown = 0}, new NavigationResult{Position = myPosition});
+                sut.NextStart();
+                    
                 
-                sut.TryFireTorpedo(out var target);
+                sut.TryFireTorpedo(new MoveProps {TorpedoCooldown = 0}, new NavigationResult{Position = myPosition}, out var target);
+                sut.NextEnd();
                 
                 Assert.AreEqual((4, 0), target);
             }
@@ -101,9 +104,10 @@ namespace OceanOfCode.Tests
                 var enemyTracker = new Mock<IEnemyTracker>();
                 AttackController sut = new AttackController(_gameProps, enemyTracker.Object, _mapScanner, _console, _headPositionReducer);
                 enemyTracker.Setup(x => x.PossibleEnemyPositions()).Returns(enemyPossibleLocations.ToList());
-                sut.Next(new MoveProps {TorpedoCooldown = 0}, new NavigationResult{Position = myPosition});
+                sut.NextStart();
                 
-                sut.TryFireTorpedo(out var target);
+                sut.TryFireTorpedo(new MoveProps {TorpedoCooldown = 0}, new NavigationResult{Position = myPosition}, out var target);
+                sut.NextEnd();
                 
                 Assert.IsNull(target);
             }

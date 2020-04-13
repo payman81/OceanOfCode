@@ -58,11 +58,10 @@ Send Actions: MOVE E SILENCE
             (3,14), BinaryTrack.FromAllZeroExcept(_gameProps, (3,14).FindNeighbouringCells(_gameProps))
             );
             AttackController attackController = new AttackController(_gameProps, _sut, binaryMap, mineMaps, _console, headPositionReducer);
-            attackController.Next(moveProps, new NavigationResult{Direction = Direction.East, Position = (2,11)});
+            attackController.NextStart();
 
             var nextMoveProps = new MoveProps{OpponentOrders = "MOVE S", OpponentLife = 5, MyPosition = (2,11), TorpedoCooldown = 0, SilenceCooldown = 2, MineCooldown = 1};
             _sut.Next(nextMoveProps);
-            attackController.Next(nextMoveProps, new NavigationResult{Direction = Direction.North, Position = (2,10)});
 
             
         }

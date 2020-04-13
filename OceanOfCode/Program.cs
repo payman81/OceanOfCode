@@ -157,6 +157,7 @@ namespace OceanOfCode
         private readonly IConsole _console;
         private readonly AttackController _attackController;
         private readonly ChargeController _chargeController;
+        private NavigationResult _lastNavigationResult;
 
         public Submarine(INavigator navigator, IEnemyTracker enemyTracker, IConsole console,
             AttackController attackController, ChargeController chargeController )
@@ -178,26 +179,43 @@ namespace OceanOfCode
         public void Next(MoveProps moveProps)
         {
             _enemyTracker.Next(moveProps);
+            _attackController.NextStart();
+
+
+            if (_lastNavigationResult != null)
+            {
+                //Before we move
+                if (_attackController.TryFireTorpedo(moveProps, _lastNavigationResult, out var torpedoTarget1))
+                {
+                    Torpedo(torpedoTarget1.Value);
+                }
+            
+                if(_attackController.TryDropMine(moveProps, _lastNavigationResult, out var dropMineDirection1))
+                {
+                    DropMine(dropMineDirection1);
+                }
+            }
             
             var next = _navigator.Next(moveProps.MyPosition);
             if (next != null && moveProps.SilenceCooldown == 0)
             {
                 Silence(next);
+                
+                //After silence
+                if (_attackController.TryFireTorpedo(moveProps, next, out var torpedoTarget2))
+                {
+                    Torpedo(torpedoTarget2.Value);
+                }
+            
+                if(_attackController.TryDropMine(moveProps, next, out var dropMineDirection2))
+                {
+                    DropMine(dropMineDirection2);
+                }
+                
                 next = _navigator.Next(next.Position);
             }
-            _attackController.Next(moveProps, next);
             
-            if (_attackController.TryFireTorpedo(out var torpedoTarget))
-            {
-                Torpedo(torpedoTarget.Value);
-            }
-            
-            if(_attackController.TryDropMine(out var dropMineDirection))
-            {
-                DropMine(dropMineDirection);
-            }
-
-            if (_attackController.TryTriggerMine(out var position))
+            if (_attackController.TryTriggerMine(moveProps, next, out var position))
             {
                 TriggerMine(position.Value);
             }
@@ -209,10 +227,20 @@ namespace OceanOfCode
             else
             {
                 Move(next.Direction, moveProps);
-                
+                if (_attackController.TryFireTorpedo(moveProps, next, out var torpedoTarget))
+                {
+                    Torpedo(torpedoTarget.Value);
+                }
+            
+                if(_attackController.TryDropMine(moveProps, next, out var dropMineDirection))
+                {
+                    DropMine(dropMineDirection);
+                }
             }
 
             ExecuteActions();
+            _lastNavigationResult = next;
+            _attackController.NextEnd();
         }
 
         private void Start((int, int) startPosition)

@@ -19,7 +19,6 @@ namespace OceanOfCode.Attack
         private (int, int)? _torpedoTarget;
         private (int, int)? _triggerTarget;
         private char _mineDirection;
-        private NavigationResult _lastNavigationResult;
 
 
         public AttackController(GameProps gameProps, IEnemyTracker enemyTracker, MapScanner mapScanner,
@@ -44,45 +43,63 @@ namespace OceanOfCode.Attack
             _mineMaps = mineMaps;
         }
 
-        public void Next(MoveProps moveProps, NavigationResult next)
+        public void NextStart()
         {
             _possibleEnemyHeadsMap = BinaryTrack.FromAllZeroExcept(_gameProps, _enemyTracker.PossibleEnemyPositions(), null);
+            
+            _torpedoTarget = null;
+            _triggerTarget = null;
+            _mineDirection = Direction.None;
+        }
 
-            _torpedoTarget = CalculateTorpedoTarget(moveProps, next ?? _lastNavigationResult);
-            _mineDirection = CalculateMineDirection(moveProps, next ?? _lastNavigationResult);
-            
-            _triggerTarget = CalculateTriggerTarget(moveProps, next ?? _lastNavigationResult);
-            if (_triggerTarget.HasValue)
-            {
-                _mineMaps.Remove(_triggerTarget.Value);
-            }
-            
+        public void NextEnd()
+        {
             _headPositionReducer.Handle(new EnemyAttacked
             {
                 TriggeredMinePosition = _triggerTarget,
                 TorpedoTargetPosition = _torpedoTarget
             });
-            
-            if (next != null)
-            {
-                _lastNavigationResult = next;
-            }
         }
 
-        public bool TryFireTorpedo(out (int, int)? target)
+        public bool TryFireTorpedo(MoveProps moveProps, NavigationResult next, out (int, int)? target)
         {
+            if (_torpedoTarget.HasValue)
+            {
+                target = null;
+                return false;
+            }
+            
+            _torpedoTarget = CalculateTorpedoTarget(moveProps, next );
+
             target = _torpedoTarget;
             return _torpedoTarget.HasValue;
         }
 
-        public bool TryDropMine(out char dropMineDirection)
+        public bool TryDropMine(MoveProps moveProps, NavigationResult next,out char dropMineDirection)
         {
+            if (_mineDirection != Direction.None)
+            {
+                dropMineDirection = Direction.None;
+                return false;
+            }
+            _mineDirection = CalculateMineDirection(moveProps, next );
+
             dropMineDirection = _mineDirection;
             return _mineDirection != Direction.None;
         }
 
-        public bool TryTriggerMine(out (int, int)? target)
+        public bool TryTriggerMine(MoveProps moveProps, NavigationResult next, out (int, int)? target)
         {
+            if (_triggerTarget.HasValue)
+            {
+                target = null;
+                return false;
+            }
+            _triggerTarget = CalculateTriggerTarget(moveProps, next );
+            if (_triggerTarget.HasValue)
+            {
+                _mineMaps.Remove(_triggerTarget.Value);
+            }
             target = _triggerTarget;
             return _triggerTarget.HasValue;
         }
@@ -127,7 +144,7 @@ namespace OceanOfCode.Attack
                     target = commonPositions.First();
                     return target;
                 }
-                _console.Debug($"Torpedo not fired as the opponent isn't within range");
+                _console.Debug($"Torpedo not fired as the opponent isn't within range. My current position is {navigationResult.Position}");
                 Log(positions);
                 return null;
             }
