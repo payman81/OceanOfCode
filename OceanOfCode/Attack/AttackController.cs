@@ -164,8 +164,10 @@ namespace OceanOfCode.Attack
             if (shouldDropMine)
             {
                 var mineArea = next.Position.FindNeighbouringCells(_gameProps);
-                mineArea.Add(next.Position);
-                _mineMaps.Add(next.Position, BinaryTrack.FromAllZeroExcept(_gameProps, mineArea, null));
+                var minePosition = next.Position.FindPositionWhenIMove(next.Direction);
+                mineArea.Add(minePosition);
+                _console.Debug($"Dropping mine at position {minePosition}");
+                _mineMaps.Add(minePosition, BinaryTrack.FromAllZeroExcept(_gameProps, mineArea, null));
             }
             return dropMineDirection;
         }

@@ -189,11 +189,6 @@ namespace OceanOfCode
                 {
                     Torpedo(torpedoTarget1.Value);
                 }
-            
-                if(_attackController.TryDropMine(moveProps, _lastNavigationResult, out var dropMineDirection1))
-                {
-                    DropMine(dropMineDirection1);
-                }
             }
             
             var next = _navigator.Next(moveProps.MyPosition);
@@ -206,12 +201,7 @@ namespace OceanOfCode
                 {
                     Torpedo(torpedoTarget2.Value);
                 }
-            
-                if(_attackController.TryDropMine(moveProps, next, out var dropMineDirection2))
-                {
-                    DropMine(dropMineDirection2);
-                }
-                
+
                 next = _navigator.Next(next.Position);
             }
             
