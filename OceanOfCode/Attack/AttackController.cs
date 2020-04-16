@@ -11,23 +11,25 @@ namespace OceanOfCode.Attack
         private readonly GameProps _gameProps;
         private readonly IEnemyTracker _enemyTracker;
         private readonly HeadPositionReducer _headPositionReducer;
+        private readonly INavigator _navigator;
         private readonly IConsole _console;
         private int[,] _map;
 
         private BinaryTrack _possibleEnemyHeadsMap;
         private Dictionary<(int,int), BinaryTrack> _mineMaps = new Dictionary<(int, int), BinaryTrack>();
-        private (int, int)? _torpedoTarget;
+        private Dictionary<(int, int),(int, int)> _torpedoTarget = new Dictionary<(int, int), (int, int)>();
         private (int, int)? _triggerTarget;
         private char _mineDirection;
 
 
         public AttackController(GameProps gameProps, IEnemyTracker enemyTracker, MapScanner mapScanner,
-            IConsole console, HeadPositionReducer headPositionReducer)
+            IConsole console, HeadPositionReducer headPositionReducer, INavigator navigator)
         {
             _gameProps = gameProps;
             _enemyTracker = enemyTracker;
             _console = console;
             _headPositionReducer = headPositionReducer;
+            _navigator = navigator;
             _map = mapScanner.GetMapOrScan();
         }
         
@@ -43,11 +45,11 @@ namespace OceanOfCode.Attack
             _mineMaps = mineMaps;
         }
 
-        public void NextStart()
+        public void NextStart(MoveProps moveProps, NavigationResult currentPosition)
         {
             _possibleEnemyHeadsMap = BinaryTrack.FromAllZeroExcept(_gameProps, _enemyTracker.PossibleEnemyPositions(), null);
             
-            _torpedoTarget = null;
+            _torpedoTarget = ComputeTorpedoTarget(moveProps, currentPosition);
             _triggerTarget = null;
             _mineDirection = Direction.None;
         }
@@ -57,22 +59,20 @@ namespace OceanOfCode.Attack
             _headPositionReducer.Handle(new EnemyAttacked
             {
                 TriggeredMinePosition = _triggerTarget,
-                TorpedoTargetPosition = _torpedoTarget
+                TorpedoTargetPosition = _torpedoTarget.Select(x => x.Value).FirstOrDefault()
             });
         }
 
-        public bool TryFireTorpedo(MoveProps moveProps, NavigationResult next, out (int, int)? target)
+        public bool TryFireTorpedo(NavigationResult next, out (int, int)? target)
         {
-            if (_torpedoTarget.HasValue)
+            if (!_torpedoTarget.ContainsKey(next.Position))
             {
                 target = null;
                 return false;
             }
-            
-            _torpedoTarget = CalculateTorpedoTarget(moveProps, next );
 
-            target = _torpedoTarget;
-            return _torpedoTarget.HasValue;
+            target = _torpedoTarget[next.Position];
+            return _torpedoTarget.ContainsKey(next.Position);
         }
 
         public bool TryDropMine(MoveProps moveProps, NavigationResult next,out char dropMineDirection)
@@ -104,54 +104,134 @@ namespace OceanOfCode.Attack
             return _triggerTarget.HasValue;
         }
 
-        private (int,int)? CalculateTorpedoTarget(MoveProps moveProps, NavigationResult navigationResult)
+
+        private Dictionary<(int, int),(int,int)> ComputeTorpedoTarget(MoveProps moveProps, NavigationResult currentNavigationResult)
         {
-            Nullable<(int, int)> target;
+            Dictionary<(int, int),(int,int)> target = new Dictionary<(int, int), (int, int)>();
+            
             if (moveProps.TorpedoCooldown != 0)
             {
                 _console.Debug("Torpedo not charged. Skipped.");
                 var positionsDebug = _enemyTracker.PossibleEnemyPositions();
                 Log(positionsDebug);
-                return null;
+                return target;
             }
-
             var positions = _enemyTracker.PossibleEnemyPositions();
-            if (positions.Count > 1)
-            {
-                string debugMessage = "Torpedo skipped. Too many candidates. ";
-                
-                _console.Debug(debugMessage);
-                Log(positions);
-                return null;
-            }
-
             if (positions.Count == 0)
             {
                 _console.Debug("Torpedo not fired as there is no possible enemy location");
                 Log(positions);
-                return null;
+                return target;
+            }
+
+            var myNextPositions = GetMyNextPositions(moveProps, currentNavigationResult);
+            var torpedoTargetsPair = FindAllTorpedoTargetsForAllMyNextPositions(myNextPositions);
+
+            //1- Do I have exact target?
+            if (positions.Count == 1)
+            {
+                //1.1 - Can I hit the exact position?
+                foreach (var torpedoTargetPair in torpedoTargetsPair)
+                {
+                    if (_possibleEnemyHeadsMap.HasCollisionWith(torpedoTargetPair.Value.torpedoTargetMap))
+                    {
+                        //I can hit the exact position
+                        _console.Debug($"Torpedo aimed at exact position at {torpedoTargetPair.Key}. My position when firing torpedo is {torpedoTargetPair.Value.myNextPositions}");
+                        Log(positions);
+                        target[torpedoTargetPair.Value.myNextPositions] = torpedoTargetPair.Key;
+                        return target;
+                    }
+                }
+                
+                //1.2 - Can I hit any neighbours of the exact position?
+                foreach (var torpedoTargetPair in torpedoTargetsPair)
+                {
+                    if (_possibleEnemyHeadsMap.HasCollisionWith(torpedoTargetPair.Value.torpedoRangeMap))
+                    {
+                        //I can hit exact position's neighbour
+                        _console.Debug($"Torpedo aimed at neighbour of exact position at {torpedoTargetPair.Key}. My position when firing torpedo is {torpedoTargetPair.Value.myNextPositions}");
+                        Log(positions);
+                        target[torpedoTargetPair.Value.myNextPositions] = torpedoTargetPair.Key;
+                        return target;
+                    }
+                }
+            }
+                
+            //2- Do I have more than one enemy positions
+            if (positions.Count > 1)
+            {
+                int maxCollidingCount = 0;
+                //2.1 Find a hit position with maximum shared cells with possible enemy positions
+                TorpedoPositionGroup bestMatch = null;
+                foreach (var torpedoTargetPair in torpedoTargetsPair)
+                {
+                    var collision = _possibleEnemyHeadsMap.CalculateCollision(torpedoTargetPair.Value.torpedoRangeMap);
+                    if (collision.CollidingCount > maxCollidingCount)
+                    {
+                        maxCollidingCount = collision.CollidingCount;
+                        bestMatch = new TorpedoPositionGroup
+                        {
+                            MyPosition = torpedoTargetPair.Value.myNextPositions,
+                            TorpedoPosition = torpedoTargetPair.Key,
+                            TorpedoTargetMap = torpedoTargetPair.Value.torpedoTargetMap,
+                            TorpedoRangeMap = torpedoTargetPair.Value.torpedoRangeMap
+                        };
+                    }
+                }
+
+                if (bestMatch != null)
+                {
+                    _console.Debug($"Torpedo aimed at possible positions at {bestMatch.TorpedoPosition}. My position when firing torpedo is {bestMatch.MyPosition} and total enemy possible positions are {positions.Count}");
+                    Log(positions);
+                    target[bestMatch.MyPosition] = bestMatch.TorpedoPosition;
+                }
             }
             
-            var positionsWithinRange = navigationResult.Position.CalculateTorpedoRange(_gameProps, _map);
-
-            var commonPositions = positions.Intersect(positionsWithinRange).ToList();
-            if (!commonPositions.Any())
-            {
-                var neighbouringCells = positions.First().FindNeighbouringCells(_gameProps);
-                commonPositions = neighbouringCells.Intersect(positionsWithinRange).ToList();
-                if (commonPositions.Any())
-                {
-                    target = commonPositions.First();
-                    return target;
-                }
-                _console.Debug($"Torpedo not fired as the opponent isn't within range. My current position is {navigationResult.Position}");
-                Log(positions);
-                return null;
-            }
-
-            target = commonPositions.First();
             return target;
         }
+
+        private Dictionary<(int, int), ((int, int) myNextPositions, BinaryTrack torpedoTargetMap, BinaryTrack torpedoRangeMap)> FindAllTorpedoTargetsForAllMyNextPositions(List<NavigationResult> myNextPositions)
+        {
+            Dictionary<(int, int), ((int, int) myNextPositions, BinaryTrack torpedoTargetMap, BinaryTrack torpedoRangeMap)> data
+                = new Dictionary<(int, int), ((int, int) myNextPositions, BinaryTrack torpedoTargetMap, BinaryTrack
+                    torpedoRangeMap)>();
+            foreach (var myNextPosition in myNextPositions)
+            {
+                var torpedoTargets = myNextPosition.Position.CalculateTorpedoRangeWithBinaryTracks(_gameProps, _map);
+                foreach (var torpedoTarget in torpedoTargets)
+                {
+                    if (data.ContainsKey(torpedoTarget.Key))
+                    {
+                        continue;
+                    }
+
+                    data[torpedoTarget.Key] = (myNextPosition.Position, torpedoTarget.Value.torpedoTargetMap,
+                        torpedoTarget.Value.torpedoRangeMap);
+                }
+            }
+
+            return data;
+        }
+
+        private List<NavigationResult> GetMyNextPositions(MoveProps moveProps, NavigationResult currentNavigationResult)
+        {
+            var myNextPositions = new List<NavigationResult>();
+            myNextPositions.Add(currentNavigationResult);
+            var next = _navigator.Next(currentNavigationResult.Position);
+            if (next != null && moveProps.SilenceCooldown == 0)
+            {
+                myNextPositions.Add(next);
+                next = _navigator.Next(next.Position);
+            }
+
+            if (next != null)
+            {
+                myNextPositions.Add(next);
+            }
+
+            return myNextPositions;
+        }
+        
         private char CalculateMineDirection(MoveProps moveProps, NavigationResult next)
         {
             bool shouldDropMine = 
@@ -194,8 +274,12 @@ namespace OceanOfCode.Attack
             }
 
             //Couldn't find guaranteed mine. Now try to find one that will reduce the possible head positions
+            var degreeOfCertainty = 20; //the higher this is the more frequent (more inaccurate) we trigger mines
             var mineWithHighestChanceOfLimitingHeadPositions =
-                collisionResults.OrderByDescending(x => x.Item1.CollidingCount).Where(x => x.Item1.CollidingCount > 0).ToList();
+                collisionResults
+                    .OrderByDescending(x => x.Item1.CollidingCount)
+                    .Where(x => x.Item1.CollidingCount > 0)
+                    .Where(x => x.Item1.NotCollidingCount < degreeOfCertainty).ToList();
             if(mineWithHighestChanceOfLimitingHeadPositions.Any())
             {
                 _console.Debug($"Trigger mine to reduce head positions by {mineWithHighestChanceOfLimitingHeadPositions.First().Item1.CollidingCount} at {mineWithHighestChanceOfLimitingHeadPositions.First().Item2}");
@@ -222,5 +306,14 @@ namespace OceanOfCode.Attack
             }
             _console.Debug("EnemyTracker state: " +  _enemyTracker.Debug());
         }
+        
+        class TorpedoPositionGroup
+        {
+            public (int,int) TorpedoPosition { get; set; }
+            public (int, int) MyPosition { get; set; }
+            public BinaryTrack TorpedoTargetMap { get; set; }
+            public BinaryTrack TorpedoRangeMap { get; set; }
+        }
+
     }
 }

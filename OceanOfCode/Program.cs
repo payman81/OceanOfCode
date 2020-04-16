@@ -8,6 +8,14 @@ using OceanOfCode.Surveillance;
 
 namespace OceanOfCode
 {
+    public static class MiscExtensions
+    {
+        public static IEnumerable<T> TakeLast<T>(this IList<T> source, int n)
+        {
+            var count = Math.Max(0, source.Count - n);
+            return source.Skip(count);
+        }
+    }
     public static class MapExtensions
     {
         public static int[,] CloneMap(this int[,] source)
@@ -91,6 +99,42 @@ namespace OceanOfCode
             return neighbours.Select(p => p.Value).ToList();
         }
 
+        public static Dictionary<(int, int), (BinaryTrack torpedoTargetMap, BinaryTrack torpedoRangeMap)> CalculateTorpedoRangeWithBinaryTracks(this (int, int) myPosition, GameProps gameProps,
+            int[,] map)
+        {
+            Dictionary<(int, int), (BinaryTrack torpedoTargetMap, BinaryTrack torpedoRangeMap)> result = new Dictionary<(int, int), (BinaryTrack torpedoTargetMap, BinaryTrack torpedoRangeMap)>();
+            var torpedoRange = myPosition.CalculateTorpedoRangeNotHittingMyself(gameProps, map);
+            foreach (var potentialTorpedoTarget in torpedoRange)
+            {
+                
+                BinaryTrack torpedoTargetMap = BinaryTrack.FromAllZeroExcept(gameProps, new List<(int,int)>{potentialTorpedoTarget});
+                BinaryTrack torpedoRangeMap = BinaryTrack.FromAllZeroExcept(gameProps, potentialTorpedoTarget.FindNeighbouringCells(gameProps));
+                result[potentialTorpedoTarget] = (torpedoTargetMap, torpedoRangeMap);
+            }
+            return result;
+        }
+
+        public static List<(int, int)> CalculateTorpedoRangeNotHittingMyself(this (int, int) myPosition, GameProps gameProps, int[,] map)
+        {
+            var (x, y) = myPosition;
+            var positionsInRange = new Dictionary<(int,int),(int,int)>();
+            int i,j;
+            for (int max = 4; max > 0; max--)
+            {
+                for (i = 0; i <= max; i++)
+                {
+                    j = max - i;
+                    SafeAddPositionsInRange(positionsInRange, (x + i, y + j), gameProps);
+                    SafeAddPositionsInRange(positionsInRange, (x + i, y - j), gameProps);
+                    SafeAddPositionsInRange(positionsInRange, (x - i, y + j), gameProps);
+                    SafeAddPositionsInRange(positionsInRange, (x - i, y - j), gameProps);
+                }
+            }
+
+            var neighbours = myPosition.FindNeighbouringCells(gameProps);
+            return positionsInRange.Values.Where(positions => map[positions.Item1, positions.Item2] == 0).Where(p => !neighbours.Any(n => n.Equals(p))).ToList();
+        }
+        
         public static List<(int, int)> CalculateTorpedoRange(this (int, int) myPosition, GameProps gameProps, int[,] map)
         {
             var (x, y) = myPosition;
@@ -179,13 +223,13 @@ namespace OceanOfCode
         public void Next(MoveProps moveProps)
         {
             _enemyTracker.Next(moveProps);
-            _attackController.NextStart();
+            _attackController.NextStart(moveProps, _lastNavigationResult);
 
 
             if (_lastNavigationResult != null)
             {
                 //Before we move
-                if (_attackController.TryFireTorpedo(moveProps, _lastNavigationResult, out var torpedoTarget1))
+                if (_attackController.TryFireTorpedo(_lastNavigationResult, out var torpedoTarget1))
                 {
                     Torpedo(torpedoTarget1.Value);
                 }
@@ -197,7 +241,7 @@ namespace OceanOfCode
                 Silence(next);
                 
                 //After silence
-                if (_attackController.TryFireTorpedo(moveProps, next, out var torpedoTarget2))
+                if (_attackController.TryFireTorpedo(next, out var torpedoTarget2))
                 {
                     Torpedo(torpedoTarget2.Value);
                 }
@@ -217,7 +261,7 @@ namespace OceanOfCode
             else
             {
                 Move(next.Direction, moveProps);
-                if (_attackController.TryFireTorpedo(moveProps, next, out var torpedoTarget))
+                if (_attackController.TryFireTorpedo(next, out var torpedoTarget))
                 {
                     Torpedo(torpedoTarget.Value);
                 }
@@ -311,10 +355,7 @@ namespace OceanOfCode
             _moveCounter++;
             string chosenCharge;
             
-            if (move.TorpedoCooldown > 0 && _moveCounter <= 3)
-            {
-                chosenCharge = Charge.Torpedo;
-            }else if (_enemyTracker.DoWeHaveExactEnemyLocation())
+            if (_enemyTracker.DoWeHaveExactEnemyLocation())
             {
                 if (move.TorpedoCooldown > 0)
                 {
@@ -331,10 +372,10 @@ namespace OceanOfCode
                     chosenCharge = Charge.Silence;
                 }
 
-            }else if (move.SilenceCooldown > 0 && _charges.Take(6).Select(x => x.Item2).Any(c => !c.Equals(Charge.Silence)))
+            }else if (move.SilenceCooldown > 0 && _charges.TakeLast(6).Select(x => x.Item2).Count(c => !c.Equals(Charge.Silence)) >= 2)
             {
                 chosenCharge = Charge.Silence;
-            }else if (move.MineCooldown > 0)
+            }else if (move.MineCooldown > 0 && !_charges.TakeLast(7).Select(x => x.Item2).Any(c => c.Equals(Charge.Mine)))
             {
                 chosenCharge = Charge.Mine;
             }
@@ -379,7 +420,7 @@ namespace OceanOfCode
     public class GameController
     {
         private readonly IConsole _console;
-        private INavigator _moveStrategy;
+        private INavigator _navigator;
         private EnemyTracker _enemyTracker;
         private Submarine _submarine;
         private GameProps _gameProps;
@@ -398,13 +439,13 @@ namespace OceanOfCode
             };
             _console.Debug(_gameProps);
             _mapScanner = new MapScanner(_gameProps, _console);
-            _moveStrategy = new PreComputedSpiralNavigator(_mapScanner, _console, reversedModeOn:true, _gameProps);
+            _navigator = new PreComputedSpiralNavigator(_mapScanner, _console, reversedModeOn:true, _gameProps);
             var headPositionReducer = new HeadPositionReducer(_gameProps, _mapScanner);
             _enemyTracker = new EnemyTracker(_gameProps, _mapScanner.GetMapOrScan(), console, headPositionReducer);
-            var torpedoController = new AttackController(_gameProps, _enemyTracker, _mapScanner, _console, headPositionReducer);
+            var torpedoController = new AttackController(_gameProps, _enemyTracker, _mapScanner, _console, headPositionReducer, _navigator);
             
             var chargeController = new ChargeController(_enemyTracker);
-            _submarine = new Submarine(_moveStrategy, _enemyTracker, _console, torpedoController, chargeController);
+            _submarine = new Submarine(_navigator, _enemyTracker, _console, torpedoController, chargeController);
             _submarine.Start();
         }
         
