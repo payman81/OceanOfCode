@@ -79,7 +79,7 @@ namespace OceanOfCode
             }
         }
         
-        public static List<(int,int)> FindNeighbouringCells(this (int, int) position, GameProps gameProps)
+        public static List<(int,int)> FindNeighbouringCells(this (int, int) position, GameProps gameProps, int[,] map)
         {
             var neighbours = new Dictionary<(int,int),(int,int)>();
             var (x, y) = position;
@@ -96,7 +96,7 @@ namespace OceanOfCode
                 }
             }
 
-            return neighbours.Select(p => p.Value).ToList();
+            return neighbours.Select(p => p.Value).Where(positions => map[positions.Item1, positions.Item2] == 0).ToList();
         }
 
         public static Dictionary<(int, int), (BinaryTrack torpedoTargetMap, BinaryTrack torpedoRangeMap)> CalculateTorpedoRangeWithBinaryTracks(this (int, int) myPosition, GameProps gameProps,
@@ -108,7 +108,7 @@ namespace OceanOfCode
             {
                 
                 BinaryTrack torpedoTargetMap = BinaryTrack.FromAllZeroExcept(gameProps, new List<(int,int)>{potentialTorpedoTarget});
-                BinaryTrack torpedoRangeMap = BinaryTrack.FromAllZeroExcept(gameProps, potentialTorpedoTarget.FindNeighbouringCells(gameProps));
+                BinaryTrack torpedoRangeMap = BinaryTrack.FromAllZeroExcept(gameProps, potentialTorpedoTarget.FindNeighbouringCells(gameProps, map));
                 result[potentialTorpedoTarget] = (torpedoTargetMap, torpedoRangeMap);
             }
             return result;
@@ -131,7 +131,7 @@ namespace OceanOfCode
                 }
             }
 
-            var neighbours = myPosition.FindNeighbouringCells(gameProps);
+            var neighbours = myPosition.FindNeighbouringCells(gameProps, map);
             return positionsInRange.Values.Where(positions => map[positions.Item1, positions.Item2] == 0).Where(p => !neighbours.Any(n => n.Equals(p))).ToList();
         }
         

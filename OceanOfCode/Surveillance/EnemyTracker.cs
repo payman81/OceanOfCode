@@ -447,13 +447,13 @@ namespace OceanOfCode.Surveillance
                 if (_lastTorpedoPosition.HasValue)
                 {
                     newArea = newArea.BinaryAnd(BinaryTrack.FromAllOneExcept(_gameProps,
-                        _lastTorpedoPosition.Value.FindNeighbouringCells(_gameProps)));
+                        _lastTorpedoPosition.Value.FindNeighbouringCells(_gameProps, _map)));
                 }
 
                 if (_lastTriggeredMinePosition.HasValue)
                 {
-                    newArea = newArea.BinaryAnd((BinaryTrack.FromAllOneExcept(_gameProps,
-                        _lastTriggeredMinePosition.Value.FindNeighbouringCells(_gameProps))));
+                    newArea = newArea.BinaryAnd(BinaryTrack.FromAllOneExcept(_gameProps,
+                        _lastTriggeredMinePosition.Value.FindNeighbouringCells(_gameProps, _map)));
                 }
 
                 _filter = _filter

@@ -34,12 +34,7 @@ namespace OceanOfCode.Tests
             var moveProps = new MoveProps{OpponentOrders = "SILENCE|SURFACE 5", OpponentLife = 5, MyPosition = (2,11), TorpedoCooldown = 0, MineCooldown = 3, SilenceCooldown = 5};
             _sut.Next(moveProps);
             
-            Dictionary<(int,int), BinaryTrack> mineMaps = new Dictionary<(int, int), BinaryTrack>();
-            mineMaps.Add(
-            (3,14), BinaryTrack.FromAllZeroExcept(_gameProps, (3,14).FindNeighbouringCells(_gameProps))
-            );
-            AttackController attackController = new AttackController(_gameProps, _sut, binaryMap, mineMaps, _console, headPositionReducer);
-            attackController.NextStart(moveProps, new NavigationResult());
+        
 
             var nextMoveProps = new MoveProps{OpponentOrders = "MOVE S", OpponentLife = 5, MyPosition = (2,11), TorpedoCooldown = 0, SilenceCooldown = 2, MineCooldown = 1};
             _sut.Next(nextMoveProps);

@@ -243,7 +243,7 @@ namespace OceanOfCode.Attack
             var dropMineDirection = shouldDropMine ? next.Direction : Direction.None;
             if (shouldDropMine)
             {
-                var mineArea = next.Position.FindNeighbouringCells(_gameProps);
+                var mineArea = next.Position.FindNeighbouringCells(_gameProps, _map);
                 var minePosition = next.Position.FindPositionWhenIMove(next.Direction);
                 mineArea.Add(minePosition);
                 _console.Debug($"Dropping mine at position {minePosition}");
@@ -254,7 +254,7 @@ namespace OceanOfCode.Attack
         private (int, int)? CalculateTriggerTarget(MoveProps moveProps, NavigationResult lastNavigationResult)
         {
             var collisionResults = new List<(CollisionResult, (int, int))>();
-            var myNeighbourCells = moveProps.MyPosition.FindNeighbouringCells(_gameProps);
+            var myNeighbourCells = moveProps.MyPosition.FindNeighbouringCells(_gameProps, _map);
             myNeighbourCells.Add(moveProps.MyPosition);
             
             foreach (var mineMap in _mineMaps.Where(x => myNeighbourCells.All(n => !n.Equals(x.Key))))
