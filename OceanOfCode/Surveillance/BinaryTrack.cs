@@ -522,10 +522,4 @@ namespace OceanOfCode.Surveillance
             return ones.Length;
         }
     }
-
-    public class CollisionResult
-    {
-        public int CollidingCount { get; set; }
-        public int NotCollidingCount { get; set; }
-    }
 }
